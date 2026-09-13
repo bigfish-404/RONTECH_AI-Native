@@ -2,7 +2,7 @@
 
 function addCompany() {
   if (state.records.some((record) => !text(record.宛先会社名))) {
-    showToast("入力中の会社名を先に完成してください。", true);
+    showToast("未入力の会社名があります。先に入力してください。", true);
     return;
   }
   const first = state.records[0] || {};
@@ -18,7 +18,7 @@ function addCompany() {
 function addProject(companyName) {
   const companyRecords = allCompanyRecords(companyName);
   if (companyRecords.some((record) => !text(record.業務内容))) {
-    showToast("入力中の案件名を先に完成してください。", true);
+    showToast("未入力の案件名があります。先に入力してください。", true);
     return;
   }
   const first = companyRecords[0] || {};
@@ -50,7 +50,7 @@ function deleteSelectedProject(companyName) {
 function addEngineer(companyName, projectName) {
   const projectRecords = allProjectRecords(companyName, projectName);
   if (projectRecords.some((record) => !text(record.技術者名))) {
-    showToast("入力中の技術者名を先に完成してください。", true);
+    showToast("未入力の技術者名があります。先に入力してください。", true);
     return;
   }
   const first = projectRecords[0] || {};
@@ -87,7 +87,7 @@ function deleteProjectSelection(companyName, projectName) {
   const count = selected.length;
   if (!count) return;
   if (count >= state.records.length) {
-    showToast("すべての技術者は削除できません。1名以上残してください。", true);
+    showToast("技術者をすべて削除することはできません。1名以上残してください。", true);
     return;
   }
   if (!window.confirm(`「${companyName} / ${projectName}」で選択中の${count}名を一覧から削除します。\n技術者がいなくなった案件・会社は一覧に表示されなくなります。\n\n削除しますか？`)) return;
@@ -104,14 +104,14 @@ function deleteProjectSelection(companyName, projectName) {
   ids.forEach((id) => state.selectedIds.delete(id));
   setDirty();
   render();
-  showToast(`${count}名を一覧から削除しました。`);
+  showToast(`${count}名を一覧から削除しました。「変更を保存」を押すと確定します。`);
 }
 
 function deleteCompany(companyName) {
   const records = allCompanyRecords(companyName);
   if (!records.length) return;
   if (records.length >= state.records.length) {
-    showToast("すべての会社は削除できません。1社以上残してください。", true);
+    showToast("会社をすべて削除することはできません。1社以上残してください。", true);
     return;
   }
   const projectCount = new Set(records.map((record) => normalizedKey(record.業務内容))).size;
@@ -121,14 +121,14 @@ function deleteCompany(companyName) {
   ids.forEach((id) => state.selectedIds.delete(id));
   setDirty();
   render();
-  showToast(`「${companyName}」を一覧から削除しました。「更新」を押すと確定します。`);
+  showToast(`「${companyName}」を一覧から削除しました。「変更を保存」を押すと確定します。`);
 }
 
 function deleteProject(companyName, projectName) {
   const records = allProjectRecords(companyName, projectName);
   if (!records.length) return;
   if (records.length >= state.records.length) {
-    showToast("すべての案件は削除できません。1件以上残してください。", true);
+    showToast("案件をすべて削除することはできません。1件以上残してください。", true);
     return;
   }
   const removesCompany = records.length === allCompanyRecords(companyName).length;
@@ -144,7 +144,7 @@ function deleteProject(companyName, projectName) {
   }
   setDirty();
   render();
-  showToast(`「${projectName}」を一覧から削除しました。「更新」を押すと確定します。`);
+  showToast(`「${projectName}」を一覧から削除しました。「変更を保存」を押すと確定します。`);
 }
 
 
@@ -164,7 +164,7 @@ function payload(records = state.records) {
 }
 
 async function loadData(confirmDiscard = false) {
-  if (confirmDiscard && state.dirty && !window.confirm("更新していない変更があります。注文データを再読込してもよろしいですか？")) return;
+  if (confirmDiscard && state.dirty && !window.confirm("保存していない変更があります。\n再読込すると、変更は失われます。\n\n再読込しますか？")) return;
   setBusy(true, "読込中");
   try {
     const data = await api("/api/data");
@@ -189,14 +189,14 @@ async function loadData(confirmDiscard = false) {
 async function saveData(silent = false) {
   state.targetMonth = elements.targetMonth.value;
   if (!showValidation(validate())) return false;
-  setBusy(true, "更新中");
+  setBusy(true, "保存中");
   try {
     await api("/api/save", { method: "POST", body: payload() });
     setDirty(false);
-    if (!silent) { showResult("注文データを更新しました。更新前のデータは backup フォルダに残しています。"); showToast("更新しました。"); }
+    if (!silent) { showResult("注文データを保存しました。変更前のデータは backup フォルダに残してあります。"); showToast("保存しました。"); }
     return true;
   } catch (error) {
-    showResult("注文データを更新できませんでした。", error.message, true); showToast(error.message, true); return false;
+    showResult("注文データを保存できませんでした。", error.message, true); showToast(error.message, true); return false;
   } finally { setBusy(false); }
 }
 async function generateOrders() {
@@ -215,15 +215,15 @@ async function generateOrders() {
     if (!state.outputRoot) return;
   }
   const outputLabel = state.outputRoot;
-  if (!window.confirm(`選択した${selectedRecords.length}名の注文書を作成します。\n対象年月: ${state.targetMonth}\n出力先: ${outputLabel}\n\n画面の全データを主データCSVへ保存してから、選択データだけを生成処理へ渡します。よろしいですか？`)) return;
+  if (!window.confirm(`選択した${selectedRecords.length}名の注文書を作成します。\n対象年月：${state.targetMonth}\n出力先：${outputLabel}\n\n画面の内容をすべて保存してから作成します。\n\n作成しますか？`)) return;
   if (!await saveData(true)) return;
   setBusy(true, "作成中"); showResult("注文書を作成しています。しばらくお待ちください。");
   try {
     const result = await api("/api/generate", { method: "POST", body: { ...payload(selectedRecords), outputRoot: state.outputRoot } });
     const outputPath = text(result.outputPath);
     elements.outputRootInput.dataset.savedValue = state.outputRoot;
-    showResult(`注文書を作成しました。\n保存先: ${outputPath || "成果物フォルダ"}`, result.log || "");
-    showToast(`ExcelとPDFを作成しました。\n保存先: ${outputPath}`);
+    showResult(`注文書を作成しました。\n保存先：${outputPath || "指定した出力先フォルダ"}`, result.log || "");
+    showToast(`ExcelとPDFを作成しました。\n保存先：${outputPath}`);
   } catch (error) {
     showResult("注文書を作成できませんでした。", error.message, true); showToast(error.message, true);
   } finally { setBusy(false); }
@@ -238,7 +238,7 @@ async function persistOutputPath() {
     state.outputRoot = text(result.path);
     elements.outputRootInput.value = state.outputRoot;
     elements.outputRootInput.dataset.savedValue = state.outputRoot;
-    showToast(state.outputRoot ? "出力先を更新しました。" : "出力先を未選択に戻しました。");
+    showToast(state.outputRoot ? "出力先を変更しました。" : "出力先の設定を解除しました。");
   } catch (error) {
     state.outputRoot = previous;
     elements.outputRootInput.value = previous;

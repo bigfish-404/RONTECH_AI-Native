@@ -146,7 +146,7 @@ async function api(path, options = {}) {
   });
   let data;
   try { data = await response.json(); }
-  catch { throw new Error("サーバーから正しい応答を受け取れませんでした。"); }
+  catch { throw new Error("ツールから正しい応答を受け取れませんでした。"); }
   if (!response.ok || !data.ok) throw new Error(data.message || data.error || "処理に失敗しました。");
   return data;
 }
@@ -154,7 +154,7 @@ async function api(path, options = {}) {
 function setDirty(dirty = true) {
   state.dirty = dirty;
   elements.saveState.className = `save-state ${dirty ? "is-dirty" : "is-saved"}`;
-  elements.saveState.lastChild.textContent = dirty ? "未更新" : "更新済み";
+  elements.saveState.lastChild.textContent = dirty ? "未保存" : "保存済み";
 }
 function selectionScope() {
   const selected = state.records.filter((record) => state.selectedIds.has(record._id));
@@ -197,7 +197,7 @@ function setBusy(busy, label = "処理中") {
   document.documentElement.setAttribute("aria-busy", String(busy));
   document.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = busy; });
   elements.saveState.className = `save-state ${busy ? "is-working" : (state.dirty ? "is-dirty" : "is-saved")}`;
-  elements.saveState.lastChild.textContent = busy ? label : (state.dirty ? "未更新" : "更新済み");
+  elements.saveState.lastChild.textContent = busy ? label : (state.dirty ? "未保存" : "保存済み");
   if (!busy) updateActionStates();
 }
 function showToast(message, isError = false) {

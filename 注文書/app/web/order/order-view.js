@@ -38,7 +38,7 @@ function render() {
           );
           if (text(value) && conflicts) {
             companyRecords.forEach((record) => { record.宛先会社名 = company.name; });
-            showToast("同じ会社名がすでに存在します。既存会社へ案件または技術者を追加してください。", true);
+            showToast("同じ会社名がすでに存在します。既存の会社に案件または技術者を追加してください。", true);
           }
           render();
         }
@@ -97,7 +97,7 @@ function render() {
             );
             if (text(value) && conflicts) {
               fullProjectRecords.forEach((record) => { record.業務内容 = project.name; });
-              showToast("同じ案件名がすでに存在します。既存案件へ技術者を追加してください。", true);
+              showToast("同じ案件名がすでに存在します。既存の案件に技術者を追加してください。", true);
             }
             render();
           }
