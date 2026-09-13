@@ -1,0 +1,59 @@
+:root {
+  color: #101828;
+  background: #eef2f6;
+  font-family: "Yu Gothic UI", "Meiryo UI", Meiryo, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --canvas: #eef2f6;
+  --surface: #ffffff;
+  --surface-subtle: #f6f8fa;
+  --surface-company: #dfe8f2;
+  --surface-project: #f3f6f9;
+  --text: #101828;
+  --text-secondary: #344054;
+  --text-muted: #596579;
+  --line: #d0d5dd;
+  --line-strong: #98a2b3;
+  --line-soft: #e4e7ec;
+  --accent: #0b5cab;
+  --accent-hover: #084a8c;
+  --accent-soft: #edf5fc;
+  --accent-line: #a9c8e8;
+  --success: #067647;
+  --success-soft: #ecfdf3;
+  --warning: #b54708;
+  --warning-soft: #fffaeb;
+  --danger: #b42318;
+  --danger-hover: #912018;
+  --danger-soft: #fef3f2;
+  --danger-line: #fecdca;
+  --focus: #84adff;
+  --radius-panel: 6px;
+  --radius-control: 4px;
+  --shadow-panel: none;
+  --font-body: 14px;
+  --font-small: 12px;
+  --font-title: 16px;
+}
+
+* { box-sizing: border-box; }
+html { min-width: 0; scroll-padding-top: 108px; background: var(--canvas); }
+body { margin: 0; min-width: 0; min-height: 100vh; color: var(--text); background: var(--canvas); font-size: var(--font-body); line-height: 1.4; }
+button, input, select, textarea { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.startup-error {
+  width: min(720px, calc(100% - 32px));
+  margin: 48px auto;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+}
+.startup-error h1 { margin: 0 0 12px; font-size: 18px; }
+.startup-error p { margin: 0; color: var(--danger); white-space: pre-wrap; }

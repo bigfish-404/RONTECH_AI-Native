@@ -1,0 +1,77 @@
+<header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">注</span>
+      <div class="product-name">
+        <span class="product-title">注文書</span>
+        <span class="product-subtitle">作成ツール</span>
+      </div>
+    </div>
+    <nav class="top-actions" aria-label="主な操作">
+      <span id="saveState" class="save-state is-saved"><i></i>更新済み</span>
+      <button id="reloadButton" class="button button-secondary" type="button">再読込</button>
+      <button id="saveButton" class="button button-secondary" type="button">変更を保存</button>
+      <button id="generateButton" class="button button-primary" type="button">注文書を作成</button>
+      <span class="top-action-divider" aria-hidden="true"></span>
+      <button id="shutdownButton" class="button button-plain shutdown-button" type="button">終了</button>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <section class="data-panel panel" aria-labelledby="listTitle">
+      <div class="workspace-heading">
+        <div class="workspace-controls">
+          <label class="month-control compact-month">
+            <span>対象年月</span>
+            <input id="targetMonth" type="month">
+          </label>
+          <div class="metrics" aria-label="登録件数">
+            <div class="metric"><strong id="companyCount">0</strong><span>会社</span></div>
+            <div class="metric"><strong id="projectCount">0</strong><span>案件</span></div>
+            <div class="metric"><strong id="engineerCount">0</strong><span>技術者</span></div>
+          </div>
+          <div class="workspace-output">
+            <label for="outputRootInput">出力先</label>
+            <input id="outputRootInput" type="text" autocomplete="off" spellcheck="false" placeholder="出力先フォルダの絶対パス">
+            <button id="selectOutputButton" class="button button-secondary folder-picker" type="button" aria-label="出力先フォルダを選択" title="出力先フォルダを選択">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4l2 2h7A1.75 1.75 0 0 1 20.25 8.75v8.5A1.75 1.75 0 0 1 18.5 19h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"/></svg>
+            </button>
+          </div>
+          <div class="workspace-actions" aria-label="会社操作">
+            <button id="addCompanyButton" class="button button-secondary add-company" type="button">会社を追加</button>
+            <button id="deleteCompanyButton" class="button button-delete" type="button" disabled>会社を削除</button>
+          </div>
+        </div>
+      </div>
+
+      <h1 id="pageTitle" class="visually-hidden">注文データ</h1>
+      <h2 id="listTitle" class="visually-hidden">注文一覧</h2>
+
+      <div class="list-toolbar" aria-label="一覧操作">
+        <div class="list-selection">
+          <label class="select-visible">
+            <input id="selectAll" type="checkbox">
+            <span>すべて選択</span>
+          </label>
+          <button id="clearSelectionButton" class="button button-plain toolbar-action" type="button" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg><span>選択解除</span>
+          </button>
+          <button id="collapseAllButton" class="button button-plain toolbar-action" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 11h14M8 18l4-4 4 4"/></svg><span>すべて折りたたむ</span>
+          </button>
+          <button id="expandAllButton" class="button button-plain toolbar-action" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 11h14M8 16l4 4 4-4"/></svg><span>すべて展開</span>
+          </button>
+        </div>
+      </div>
+
+      <section id="companyList" class="company-list" aria-label="会社・案件・技術者一覧"></section>
+      <section id="emptyState" class="empty-state" hidden>
+        <strong>表示するデータがありません</strong>
+        <span>「会社を追加」から最初の注文データを登録してください。</span>
+      </section>
+    </section>
+
+    <p id="resultMessage" class="visually-hidden" role="status" aria-live="polite">注文データを読み込んでいます。</p>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
