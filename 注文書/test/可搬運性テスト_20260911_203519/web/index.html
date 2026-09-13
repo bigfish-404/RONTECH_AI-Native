@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="app-token" content="__APP_TOKEN__">
+  <title>注文書作成ツール</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">注</span>
+      <div>
+        <h1>注文書作成ツール</h1>
+        <p>注文データの確認・編集・一括処理</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="saveState" class="status-badge status-saved">保存済み</span>
+      <button id="reloadButton" class="button button-quiet" type="button">CSV再読込</button>
+      <button id="saveButton" class="button button-secondary" type="button">CSVに保存</button>
+      <button id="generateButton" class="button button-primary" type="button">注文書を作成</button>
+      <button id="shutdownButton" class="button button-header-quiet" type="button">終了</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="guide" aria-label="操作手順">
+      <strong>操作は3ステップです</strong>
+      <span><b>1</b> 対象年月を確認</span>
+      <span><b>2</b> データを確認・修正</span>
+      <span><b>3</b> 「注文書を作成」を押す</span>
+    </section>
+
+    <section class="control-panel" aria-label="対象年月と検索">
+      <label class="field month-field">
+        <span>対象年月</span>
+        <input id="targetMonth" type="month" value="2026-10">
+      </label>
+      <div class="metric">
+        <span>会社</span>
+        <strong id="companyCount">2</strong>
+      </div>
+      <div class="metric">
+        <span>案件</span>
+        <strong id="projectCount">2</strong>
+      </div>
+      <div class="metric">
+        <span>技術者</span>
+        <strong id="engineerCount">4</strong>
+      </div>
+      <label class="field search-field">
+        <span>絞り込み</span>
+        <input id="searchInput" type="search" placeholder="会社・案件・技術者を検索">
+      </label>
+    </section>
+
+    <section class="toolbar" aria-label="行操作">
+      <div class="toolbar-group">
+        <button id="addButton" class="button button-secondary" type="button">行を追加</button>
+        <button id="duplicateButton" class="button button-quiet" type="button">選択行を複製</button>
+        <button id="deleteButton" class="button button-danger" type="button">選択行を削除</button>
+        <button id="detailToggleButton" class="button button-quiet" type="button" aria-pressed="true">詳細項目を隠す</button>
+        <span id="selectionCount" class="selection-count">0件選択</span>
+      </div>
+      <div class="bulk-editor">
+        <label for="bulkField">一括変更</label>
+        <select id="bulkField">
+          <option value="">項目を選択</option>
+          <option value="宛先会社名">宛先会社名</option>
+          <option value="出力フォルダ名">出力フォルダ名</option>
+          <option value="業務内容">業務内容</option>
+          <option value="工程範囲">工程範囲</option>
+          <option value="技術者名">技術者名</option>
+          <option value="単価">単価</option>
+          <option value="固定契約">固定契約</option>
+          <option value="下限時間">下限時間</option>
+          <option value="上限時間">上限時間</option>
+          <option value="弊社責任者">弊社責任者</option>
+          <option value="備考">備考</option>
+        </select>
+        <input id="bulkValue" type="text" placeholder="変更する項目を選択" disabled>
+        <button id="bulkApplyButton" class="button button-secondary" type="button" disabled>適用</button>
+      </div>
+    </section>
+
+    <section class="table-card" aria-label="注文データ一覧">
+      <div class="table-note">
+        <span>同じ会社の「出力フォルダ名」は、最初の行だけ入力すれば空欄行にも引き継がれます。</span>
+        <span>固定契約：Y＝固定契約、N＝時間精算</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="check-column"><input id="selectAll" type="checkbox" aria-label="表示中の行を全て選択"></th>
+              <th>宛先会社名</th>
+              <th class="detail-column">出力フォルダ名</th>
+              <th>業務内容</th>
+              <th class="detail-column">工程範囲</th>
+              <th>技術者名</th>
+              <th class="number-column">単価</th>
+              <th>固定契約</th>
+              <th class="hours-column">下限時間</th>
+              <th class="hours-column">上限時間</th>
+              <th class="preview-column detail-column">超過単価</th>
+              <th class="preview-column detail-column">控除単価</th>
+              <th class="detail-column">弊社責任者</th>
+              <th class="detail-column">備考</th>
+            </tr>
+          </thead>
+          <tbody id="dataTableBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="empty-state" hidden>表示できる注文データがありません。</div>
+    </section>
+
+    <section class="result-panel" aria-live="polite">
+      <div>
+        <h2>実行結果</h2>
+        <p id="resultMessage">注文書を作成すると、ここに結果が表示されます。</p>
+        <details id="logDetails" hidden>
+          <summary>詳しい実行内容を表示</summary>
+          <pre id="resultLog"></pre>
+        </details>
+      </div>
+      <button id="openOutputButton" class="button button-quiet" type="button" disabled>成果物フォルダを開く</button>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="/app.js"></script>
+</body>
+</html>
