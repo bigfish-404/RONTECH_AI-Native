@@ -90,7 +90,7 @@ function deleteProjectSelection(companyName, projectName) {
     showToast("すべての技術者は削除できません。1名以上残してください。", true);
     return;
   }
-  if (!window.confirm(`「${companyName} / ${projectName}」で選択した${count}名を一覧から削除します。\n技術者がいなくなった案件・会社は一覧からなくなります。\n次回の「変更を保存」で注文データから削除されます。\n生成済みのExcel・PDFは削除されません。\n\n削除してもよろしいですか？`)) return;
+  if (!window.confirm(`「${companyName} / ${projectName}」で選択中の${count}名を一覧から削除します。\n技術者がいなくなった案件・会社は一覧に表示されなくなります。\n\n削除しますか？`)) return;
   const folders = new Map(groupRecords(state.records).map((company) => [
     company.key,
     text(allCompanyRecords(company.name).find((record) => text(record.出力フォルダ名))?.出力フォルダ名)
@@ -115,7 +115,7 @@ function deleteCompany(companyName) {
     return;
   }
   const projectCount = new Set(records.map((record) => normalizedKey(record.業務内容))).size;
-  if (!window.confirm(`「${companyName}」を一覧から削除します。\n所属する${projectCount}案件・${records.length}名も、次回の「更新」で注文データから削除されます。\n生成済みのExcel・PDFは削除されません。\n\n削除してもよろしいですか？`)) return;
+  if (!window.confirm(`「${companyName}」を一覧から削除します。\n削除対象：${projectCount}案件・${records.length}名\n\n削除しますか？`)) return;
   const ids = new Set(records.map((record) => record._id));
   state.records = state.records.filter((record) => !ids.has(record._id));
   ids.forEach((id) => state.selectedIds.delete(id));
@@ -132,8 +132,8 @@ function deleteProject(companyName, projectName) {
     return;
   }
   const removesCompany = records.length === allCompanyRecords(companyName).length;
-  const companyNote = removesCompany ? "\nこの会社の最後の案件のため、会社も一覧からなくなります。" : "";
-  if (!window.confirm(`「${companyName} / ${projectName}」を一覧から削除します。\n所属する${records.length}名も、次回の「更新」で注文データから削除されます。${companyNote}\n生成済みのExcel・PDFは削除されません。\n\n削除してもよろしいですか？`)) return;
+  const companyNote = removesCompany ? "\nこの会社の最後の案件のため、会社も一覧に表示されなくなります。" : "";
+  if (!window.confirm(`「${companyName} / ${projectName}」を一覧から削除します。\n削除対象：技術者${records.length}名${companyNote}\n\n削除しますか？`)) return;
   const folder = text(allCompanyRecords(companyName).find((record) => text(record.出力フォルダ名))?.出力フォルダ名);
   const ids = new Set(records.map((record) => record._id));
   state.records = state.records.filter((record) => !ids.has(record._id));
