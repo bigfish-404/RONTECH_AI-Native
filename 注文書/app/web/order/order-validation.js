@@ -16,7 +16,7 @@ function validate(requireRecords = true) {
       if (text(record[field])) return;
       add(record, `${row}行目の「${field}」が未入力です。`);
       if (field === "宛先会社名") invalidCompanyIds.add(record._id);
-      if (["業務内容", "工程範囲", "弊社責任者"].includes(field)) invalidProjectIds.add(record._id);
+      if (["件名", "業務内容", "工程範囲", "弊社責任者"].includes(field)) invalidProjectIds.add(record._id);
     });
     const price = parseNumber(record.単価), lower = parseHours(record.下限時間), upper = parseHours(record.上限時間);
     if (/\s/.test(text(record.単価)) || price == null || price < 0) add(record, `${row}行目の「単価」が正しくありません。`);
@@ -24,9 +24,9 @@ function validate(requireRecords = true) {
     if (lower == null || lower <= 0) add(record, `${row}行目の「下限時間」が正しくありません。`);
     if (upper == null || upper <= 0) add(record, `${row}行目の「上限時間」が正しくありません。`);
     if (lower != null && upper != null && lower >= upper) add(record, `${row}行目は下限時間を上限時間より小さくしてください。`);
-    if (text(record.宛先会社名) && text(record.業務内容) && text(record.技術者名)) {
-      const duplicateKey = normalizedKey(record.宛先会社名, record.業務内容, record.技術者名);
-      if (duplicates.has(duplicateKey)) add(record, `${row}行目は${duplicates.get(duplicateKey)}行目と同じ会社・案件・技術者です。`);
+    if (text(record.宛先会社名) && text(record.件名) && text(record.技術者名)) {
+      const duplicateKey = normalizedKey(record.宛先会社名, record.件名, record.技術者名);
+      if (duplicates.has(duplicateKey)) add(record, `${row}行目は${duplicates.get(duplicateKey)}行目と同じ会社・件名・技術者です。`);
       else duplicates.set(duplicateKey, row);
     }
     const companyKey = normalizedKey(record.宛先会社名);
@@ -34,10 +34,10 @@ function validate(requireRecords = true) {
     const company = companyFolders.get(companyKey);
     if (text(record.出力フォルダ名)) company.folders.set(normalizedKey(record.出力フォルダ名), text(record.出力フォルダ名));
     company.records.push(record);
-    const projectKey = normalizedKey(record.宛先会社名, record.業務内容);
-    if (!projects.has(projectKey)) projects.set(projectKey, { company: text(record.宛先会社名), project: text(record.業務内容), records: [], values: new Map() });
+    const projectKey = normalizedKey(record.宛先会社名, record.件名);
+    if (!projects.has(projectKey)) projects.set(projectKey, { company: text(record.宛先会社名), project: text(record.件名), records: [], values: new Map() });
     const project = projects.get(projectKey); project.records.push(record);
-    ["工程範囲", "弊社責任者", "備考"].forEach((field) => {
+    ["業務内容", "工程範囲", "弊社責任者", "備考"].forEach((field) => {
       const value = text(record[field]); if (!value) return;
       if (!project.values.has(field)) project.values.set(field, new Set());
       project.values.get(field).add(normalizedKey(value));

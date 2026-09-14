@@ -106,7 +106,7 @@ function Get-BaseSheetName {
 
     $name = ($ProjectName -replace '[:\\/?*\[\]]', '_').Trim("'").Trim()
     if ([string]::IsNullOrWhiteSpace($name)) {
-        throw "シート名に使用できる業務内容がありません: $ProjectName"
+        throw "シート名に使用できる件名がありません: $ProjectName"
     }
 
     return $name.Substring(0, [Math]::Min($name.Length, 31))
@@ -148,7 +148,7 @@ function Get-ProjectCommonValue {
     )
 
     if ($values.Count -gt 1) {
-        throw "同一会社・同一業務内容の「$FieldName」を統一してください: $CompanyName / $ProjectName"
+        throw "同一会社・同一件名の「$FieldName」を統一してください: $CompanyName / $ProjectName"
     }
 
     if ($values.Count -eq 0) {
@@ -209,6 +209,77 @@ function Release-ComObject {
     }
 }
 
+function Get-HorizontalPageBreakRows {
+    param([Parameter(Mandatory = $true)][object]$Worksheet)
+
+    $rows = [System.Collections.Generic.List[int]]::new()
+    $breaks = $null
+    try {
+        $breaks = $Worksheet.HPageBreaks
+        for ($index = 1; $index -le $breaks.Count; $index++) {
+            $pageBreak = $null
+            $location = $null
+            try {
+                $pageBreak = $breaks.Item($index)
+                $location = $pageBreak.Location
+                $rows.Add([int]$location.Row)
+            }
+            finally {
+                Release-ComObject -Object $location
+                Release-ComObject -Object $pageBreak
+            }
+        }
+    }
+    finally {
+        Release-ComObject -Object $breaks
+    }
+    return @($rows)
+}
+
+function Set-AtomicEngineerPageBreaks {
+    param(
+        [Parameter(Mandatory = $true)][object]$Worksheet,
+        [Parameter(Mandatory = $true)][object]$Excel,
+        [Parameter(Mandatory = $true)][object[]]$Blocks
+    )
+
+    [void]$Worksheet.ResetAllPageBreaks()
+    $Worksheet.PageSetup.PrintTitleRows = ''
+    [void]$Worksheet.Activate()
+    try { $Worksheet.DisplayPageBreaks = $true } catch { }
+    $Excel.CalculateFullRebuild()
+
+    $manualBreakRows = @{}
+    for ($iteration = 0; $iteration -le $Blocks.Count; $iteration++) {
+        $breakRows = @(Get-HorizontalPageBreakRows -Worksheet $Worksheet)
+        $splitBlock = $null
+        foreach ($block in $Blocks) {
+            if ($breakRows | Where-Object { $_ -gt $block.Start -and $_ -le $block.End } | Select-Object -First 1) {
+                $splitBlock = $block
+                break
+            }
+        }
+        if ($null -eq $splitBlock) {
+            return
+        }
+        if ($manualBreakRows.ContainsKey($splitBlock.Start)) {
+            throw "技術者「$($splitBlock.Engineer)」を同じページ内に配置できません。"
+        }
+
+        $breakCell = $null
+        try {
+            $breakCell = $Worksheet.Range("A$($splitBlock.Start)")
+            $breakCell.PageBreak = -4135
+            $manualBreakRows[$splitBlock.Start] = $true
+        }
+        finally {
+            Release-ComObject -Object $breakCell
+        }
+        $Excel.CalculateFullRebuild()
+    }
+    throw '技術者単位の改ページ調整が完了しませんでした。'
+}
+
 function New-VersionedMonthDirectory {
     param(
         [Parameter(Mandatory = $true)][string]$OutputRoot,
@@ -251,8 +322,8 @@ function Invoke-OrderWorkbookGeneration {
     $monthKey = $targetMonth.ToString('yyyyMM')
     $monthName = '{0}年{1}月' -f $targetMonth.Year, $targetMonth.Month
     
-    $requiredHeaders = @('宛先会社名', '出力フォルダ名', '業務内容', '工程範囲', '技術者名', '単価', '固定契約', '下限時間', '上限時間', '弊社責任者', '備考')
-    $commonRequiredHeaders = @('宛先会社名', '業務内容', '工程範囲', '技術者名', '単価', '固定契約', '弊社責任者')
+    $requiredHeaders = @('宛先会社名', '出力フォルダ名', '件名', '業務内容', '工程範囲', '技術者名', '単価', '固定契約', '下限時間', '上限時間', '弊社責任者', '備考')
+    $commonRequiredHeaders = @('宛先会社名', '件名', '業務内容', '工程範囲', '技術者名', '単価', '固定契約', '弊社責任者')
     $recordsProperty = $OrderData.PSObject.Properties['records']
     [object[]]$inputRecords = @()
     if ($null -ne $recordsProperty -and $null -ne $recordsProperty.Value) {
@@ -296,6 +367,7 @@ function Invoke-OrderWorkbookGeneration {
             順序       = $records.Count
             宛先会社名 = $values['宛先会社名']
             出力フォルダ名 = $values['出力フォルダ名']
+            件名       = $values['件名']
             業務内容   = $values['業務内容']
             工程範囲   = $values['工程範囲']
             技術者名   = $values['技術者名']
@@ -315,9 +387,9 @@ function Invoke-OrderWorkbookGeneration {
     $recordKeys = @{}
     $recordKeySeparator = [char]31
     foreach ($record in $records) {
-        $recordKey = ($record.宛先会社名 + $recordKeySeparator + $record.業務内容 + $recordKeySeparator + $record.技術者名).ToLowerInvariant()
+        $recordKey = ($record.宛先会社名 + $recordKeySeparator + $record.件名 + $recordKeySeparator + $record.技術者名).ToLowerInvariant()
         if ($recordKeys.ContainsKey($recordKey)) {
-            throw "同一会社・同一業務内容・同一技術者名が重複しています: 生成データ $($recordKeys[$recordKey]) 行目 / $($record.データ行) 行目"
+            throw "同一会社・同一件名・同一技術者名が重複しています: 生成データ $($recordKeys[$recordKey]) 行目 / $($record.データ行) 行目"
         }
         $recordKeys[$recordKey] = $record.データ行
     }
@@ -335,10 +407,11 @@ function Invoke-OrderWorkbookGeneration {
         }
         $usedOutputFolders[$outputFolderKey] = $companyName
         $companyOutputFolders[$companyName.ToLowerInvariant()] = $safeOutputFolderName
-        $projectGroups = @($companyRecords | Group-Object -Property 業務内容)
+        $projectGroups = @($companyRecords | Group-Object -Property 件名)
         foreach ($projectGroup in $projectGroups) {
             $projectName = [string]$projectGroup.Name
             $projectRecords = @($projectGroup.Group | Sort-Object -Property 順序)
+            [void](Get-ProjectCommonValue -Records $projectRecords -FieldName '業務内容' -CompanyName $companyName -ProjectName $projectName)
             [void](Get-ProjectCommonValue -Records $projectRecords -FieldName '工程範囲' -CompanyName $companyName -ProjectName $projectName)
             [void](Get-ProjectCommonValue -Records $projectRecords -FieldName '弊社責任者' -CompanyName $companyName -ProjectName $projectName)
             [void](Get-ProjectCommonValue -Records $projectRecords -FieldName '備考' -CompanyName $companyName -ProjectName $projectName)
@@ -366,10 +439,12 @@ function Invoke-OrderWorkbookGeneration {
     
             $outputBaseName = "${safeCompanyName}様向け注文書_${monthKey}"
             $xlsxPath = Join-Path $companyDirectory "$outputBaseName.xlsx"
-            $pdfPath = Join-Path $companyDirectory "$outputBaseName.pdf"
+            $pdfDirectory = Join-Path $companyDirectory $outputBaseName
+            [void][IO.Directory]::CreateDirectory($pdfDirectory)
+            $pdfPath = Join-Path $pdfDirectory "$outputBaseName.pdf"
     
             $companyRecords = @($companyGroup.Group | Sort-Object -Property 順序)
-            $projectGroups = @($companyRecords | Group-Object -Property 業務内容)
+            $projectGroups = @($companyRecords | Group-Object -Property 件名)
             Copy-Item -LiteralPath $unifiedTemplatePath -Destination $xlsxPath
     
             $workbook = $null
@@ -402,6 +477,7 @@ function Invoke-OrderWorkbookGeneration {
                     $projectGroup = $projectGroups[$projectIndex]
                     $projectName = [string]$projectGroup.Name
                     $projectRecords = @($projectGroup.Group | Sort-Object -Property 順序)
+                    $projectBusinessContent = Get-ProjectCommonValue -Records $projectRecords -FieldName '業務内容' -CompanyName $companyName -ProjectName $projectName
                     $projectRange = Get-ProjectCommonValue -Records $projectRecords -FieldName '工程範囲' -CompanyName $companyName -ProjectName $projectName
                     $projectManager = Get-ProjectCommonValue -Records $projectRecords -FieldName '弊社責任者' -CompanyName $companyName -ProjectName $projectName
                     $projectNote = Get-ProjectCommonValue -Records $projectRecords -FieldName '備考' -CompanyName $companyName -ProjectName $projectName
@@ -416,7 +492,7 @@ function Invoke-OrderWorkbookGeneration {
                     $worksheet.Range('C17').Formula = "=DATE($($targetMonth.Year),$($targetMonth.Month),1)"
                     $worksheet.Range('C17').NumberFormatLocal = 'yyyy"年"m"月"d"日"'
                     $worksheet.Range('F17').NumberFormatLocal = 'yyyy"年"m"月"d"日"'
-                    $worksheet.Range('C18').Value2 = $projectName
+                    $worksheet.Range('C18').Value2 = $projectBusinessContent
                     $worksheet.Range('C19').Value2 = $projectRange
                     $worksheet.Range('M12').Value2 = $projectManager
     
@@ -437,6 +513,7 @@ function Invoke-OrderWorkbookGeneration {
                     }
     
                     $containsSettlement = $false
+                    $engineerBlocks = [System.Collections.Generic.List[object]]::new()
                     for ($personIndex = 0; $personIndex -lt $projectRecords.Count; $personIndex++) {
                         $record = $projectRecords[$personIndex]
                         $blockStart = 22 + (4 * $personIndex)
@@ -465,7 +542,7 @@ function Invoke-OrderWorkbookGeneration {
                             $worksheet.Range("A${fixedTimeRow}:B${fixedTimeRow}").Merge()
                             $worksheet.Range("C${fixedTimeRow}:I${fixedTimeRow}").Merge()
     
-                            $worksheet.Range("A${blockStart}").Value2 = '技術者、料金'
+                            $worksheet.Range("A${blockStart}").Value2 = '技術者'
                             $worksheet.Range("C${blockStart}").Value2 = $record.技術者名
                             $worksheet.Range("J${blockStart}").Value2 = 1
                             $worksheet.Range("K${blockStart}").Value2 = '人月'
@@ -474,9 +551,10 @@ function Invoke-OrderWorkbookGeneration {
                             $worksheet.Range("A${fixedTimeRow}").Value2 = '基準時間'
                             $worksheet.Range("C${fixedTimeRow}").Value2 = "月基準作業時間（${lowerHoursText}h～${upperHoursText}h）`n過不足あった場合は別途調整`n※作業時間が${upperHoursText}時間超えそうな場合には、事前にPMへ報告願います"
                             $worksheet.Range("C${fixedTimeRow}").WrapText = $true
-                            $worksheet.Range("C${fixedTimeRow}").Font.Size = 8
+                            $worksheet.Range("C${fixedTimeRow}").Font.Size = 10
                             $worksheet.Rows.Item($fixedTimeRow).RowHeight = 48
                             $worksheet.Rows("${unusedStart}:$($unusedStart + 1)").Hidden = $true
+                            $engineerBlocks.Add([pscustomobject]@{ Start = $blockStart; End = $fixedTimeRow; Engineer = $record.技術者名 })
                         }
                         else {
                             $containsSettlement = $true
@@ -498,6 +576,7 @@ function Invoke-OrderWorkbookGeneration {
                             $worksheet.Range("A${deductRow}").Value2 = "控除単価（${lowerHoursText}h不足分）※10円未満切捨"
                             $worksheet.Range("K${deductRow}").Value2 = '時間'
                             $worksheet.Range("L${deductRow}").Formula = ('=ROUNDDOWN(-L{0}/$S${1},-1)' -f $priceRow, $overRow)
+                            $engineerBlocks.Add([pscustomobject]@{ Start = $blockStart; End = $deductRow; Engineer = $record.技術者名 })
                         }
                     }
     
@@ -535,37 +614,31 @@ function Invoke-OrderWorkbookGeneration {
                     $worksheet.Range("L${taxRow}").Formula = "=L${subtotalRow}*`$T`$6"
                     $worksheet.Range("L${totalRow}").Formula = "=L${subtotalRow}+L${taxRow}"
                     $worksheet.Range('D14').Formula = "=L${totalRow}"
+
+                    $leftBodyRange = $worksheet.Range("A17:I$($remarkRow + 1)")
+                    $leftBodyRange.Font.Name = '游ゴシック'
+                    $leftBodyRange.Font.Size = 10
+                    Release-ComObject -Object $leftBodyRange
+                    $engineerValueRange = $worksheet.Range("J22:Q$($noteRow - 1)")
+                    $engineerValueRange.Font.Name = '游ゴシック'
+                    $engineerValueRange.Font.Size = 10
+                    Release-ComObject -Object $engineerValueRange
     
-                    $worksheet.Activate()
+                    [void]$worksheet.Activate()
                     $worksheet.PageSetup.PrintArea = "`$A`$1:`$Q`$$($remarkRow + 3)"
                     $worksheet.PageSetup.Zoom = $false
                     $worksheet.PageSetup.FitToPagesWide = 1
-                    if ($projectRecords.Count -le 2) {
-                        $worksheet.PageSetup.FitToPagesTall = 1
-                    }
-                    else {
-                        $worksheet.PageSetup.FitToPagesTall = $false
-                        $worksheet.PageSetup.TopMargin = $excel.InchesToPoints(0.3)
-                        $worksheet.PageSetup.BottomMargin = $excel.InchesToPoints(0.3)
-                        for ($pagePersonIndex = 2; $pagePersonIndex -lt $projectRecords.Count; $pagePersonIndex += 2) {
-                            $pageBreakCell = $null
-                            try {
-                                $pageBreakCell = $worksheet.Range("A$(22 + (4 * $pagePersonIndex))")
-                                $pageBreakCell.PageBreak = -4135
-                            }
-                            finally {
-                                Release-ComObject -Object $pageBreakCell
-                            }
-                        }
-                        $worksheet.PageSetup.PrintTitleRows = '$1:$21'
-                    }
+                    $worksheet.PageSetup.FitToPagesTall = $false
+                    $worksheet.PageSetup.TopMargin = $excel.InchesToPoints(0.3)
+                    $worksheet.PageSetup.BottomMargin = $excel.InchesToPoints(0.3)
+                    Set-AtomicEngineerPageBreaks -Worksheet $worksheet -Excel $excel -Blocks @($engineerBlocks)
                 }
     
                 $excel.CalculateFullRebuild()
                 $workbook.Save()
     
                 if ($workbook.Worksheets.Count -ne $projectGroups.Count) {
-                    throw "ワークシート数と業務内容数が一致しません: $companyName"
+                    throw "ワークシート数と件名数が一致しません: $companyName"
                 }
     
                 $workbook.ExportAsFixedFormat(0, $pdfPath)

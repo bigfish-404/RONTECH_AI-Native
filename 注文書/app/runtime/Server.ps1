@@ -32,6 +32,7 @@ $outputFolderSelectionRoot = Join-Path ([IO.Path]::GetTempPath()) 'rontech-order
 $csvHeaders = @(
     '宛先会社名',
     '出力フォルダ名',
+    '件名',
     '業務内容',
     '工程範囲',
     '技術者名',

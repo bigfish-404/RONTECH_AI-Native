@@ -87,17 +87,17 @@ function render() {
         const projectBar = createElement("div", "project-bar");
         const titleRow = createElement("div", "project-title-row");
         const projectNameInput = createInlineControl({
-          value: project.name, label: "業務内容", className: "project-title-input", placeholder: "案件名を入力",
-          onInput: (value) => fullProjectRecords.forEach((record) => { record.業務内容 = value; }),
+          value: project.name, label: "件名", className: "project-title-input", placeholder: "件名を入力",
+          onInput: (value) => fullProjectRecords.forEach((record) => { record.件名 = value; }),
           onCommit: (value) => {
             const conflicts = state.records.some((record) =>
               !fullProjectRecords.includes(record) &&
               normalizedKey(record.宛先会社名) === normalizedKey(common.宛先会社名) &&
-              normalizedKey(record.業務内容) === normalizedKey(value)
+              normalizedKey(record.件名) === normalizedKey(value)
             );
             if (text(value) && conflicts) {
-              fullProjectRecords.forEach((record) => { record.業務内容 = project.name; });
-              showToast("同じ案件名がすでに存在します。既存の案件に技術者を追加してください。", true);
+              fullProjectRecords.forEach((record) => { record.件名 = project.name; });
+              showToast("同じ件名がすでに存在します。既存の案件に技術者を追加してください。", true);
             }
             render();
           }
@@ -105,7 +105,7 @@ function render() {
         titleRow.append(
           createGroupSelector(fullProjectRecords, `${project.name || "この案件"}の技術者をすべて選択`)
         );
-        const projectNameField = createLabeledControl("案件名", projectNameInput, "project-name-field");
+        const projectNameField = createLabeledControl("件名", projectNameInput, "project-name-field");
         const projectCount = createElement("span", "count-chip", `${fullProjectRecords.length}名`);
         const projectCollapse = createCollapseButton(projectCollapsed, `${project.name || "この案件"}の詳細`, () => {
           if (projectCollapsed) state.collapsedProjects.delete(projectCollapseKey);
@@ -113,6 +113,7 @@ function render() {
           render();
         });
         const commonUpdater = (field) => (value) => fullProjectRecords.forEach((record) => { record[field] = value; });
+        const businessContent = createLabeledControl("業務内容", createInlineControl({ value: common.業務内容, label: "業務内容", className: "project-wide-input", multiline: true, placeholder: "業務内容を入力", onInput: commonUpdater("業務内容") }), "project-business-field");
         const range = createLabeledControl("工程", createInlineControl({ value: common.工程範囲, label: "工程範囲", className: "project-wide-input", multiline: true, placeholder: "工程範囲を入力", onInput: commonUpdater("工程範囲") }), "project-range-field");
         const manager = createLabeledControl("担当者", createInlineControl({ value: common.弊社責任者, label: "弊社責任者", className: "project-manager-input", placeholder: "責任者名を入力", onInput: commonUpdater("弊社責任者") }));
         const remarks = createLabeledControl("備考", createInlineControl({ value: common.備考, label: "備考", className: "project-wide-input", multiline: true, placeholder: "必要な場合のみ入力", onInput: commonUpdater("備考") }), "project-remarks-field");
@@ -125,7 +126,7 @@ function render() {
         );
         projectBar.append(projectCollapse, titleRow, projectNameField, projectCount, projectActions);
         const projectFields = createElement("div", "project-fields");
-        projectFields.append(range, manager, remarks);
+        projectFields.append(businessContent, range, manager, remarks);
         projectFields.hidden = projectCollapsed;
         projectInfo.append(projectBar, projectFields);
         projectCell.append(projectInfo);
@@ -178,7 +179,7 @@ function renderEngineerRow(record) {
     value: record.技術者名, label: "技術者名", className: "engineer-name-input", placeholder: "技術者名を入力",
     onInput: (value) => { record.技術者名 = value; },
     onCommit: (value) => {
-      const duplicate = allProjectRecords(record.宛先会社名, record.業務内容)
+      const duplicate = allProjectRecords(record.宛先会社名, record.件名)
         .some((item) => item._id !== record._id && normalizedKey(item.技術者名) === normalizedKey(value));
       if (text(value) && duplicate) {
         record.技術者名 = originalName;
@@ -237,7 +238,7 @@ function renderEngineerRow(record) {
 
 function updateMetrics() {
   const companies = new Set(state.records.map((record) => text(record.宛先会社名)).filter(Boolean));
-  const projects = new Set(state.records.filter((record) => text(record.宛先会社名) && text(record.業務内容)).map((record) => normalizedKey(record.宛先会社名, record.業務内容)));
+  const projects = new Set(state.records.filter((record) => text(record.宛先会社名) && text(record.件名)).map((record) => normalizedKey(record.宛先会社名, record.件名)));
   elements.companyCount.textContent = companies.size;
   elements.projectCount.textContent = projects.size;
   elements.engineerCount.textContent = state.records.length;

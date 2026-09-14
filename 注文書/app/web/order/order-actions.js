@@ -7,7 +7,7 @@ function addCompany() {
   }
   const first = state.records[0] || {};
   state.records.push({
-    _id: makeId(), 宛先会社名: "", 出力フォルダ名: "", 業務内容: "", 工程範囲: first.工程範囲 || "上記業務とそれに伴う附帯作業",
+    _id: makeId(), 宛先会社名: "", 出力フォルダ名: "", 件名: "", 業務内容: "", 工程範囲: first.工程範囲 || "上記業務とそれに伴う附帯作業",
     技術者名: "", 単価: "", 固定契約: "N", 下限時間: first.下限時間 || "", 上限時間: first.上限時間 || "",
     弊社責任者: first.弊社責任者 || "", 備考: ""
   });
@@ -17,13 +17,13 @@ function addCompany() {
 }
 function addProject(companyName) {
   const companyRecords = allCompanyRecords(companyName);
-  if (companyRecords.some((record) => !text(record.業務内容))) {
-    showToast("未入力の案件名があります。先に入力してください。", true);
+  if (companyRecords.some((record) => !text(record.件名))) {
+    showToast("未入力の件名があります。先に入力してください。", true);
     return;
   }
   const first = companyRecords[0] || {};
   const record = {
-    _id: makeId(), 宛先会社名: companyName, 出力フォルダ名: "", 業務内容: "",
+    _id: makeId(), 宛先会社名: companyName, 出力フォルダ名: "", 件名: "", 業務内容: "",
     工程範囲: first.工程範囲 || "上記業務とそれに伴う附帯作業", 弊社責任者: first.弊社責任者 || "", 備考: "",
     技術者名: "", 単価: "", 固定契約: "N", 下限時間: first.下限時間 || "", 上限時間: first.上限時間 || ""
   };
@@ -41,7 +41,7 @@ function deleteCompanyForSelection() {
 }
 function deleteSelectedProject(companyName) {
   const selected = allCompanyRecords(companyName).filter((record) => state.selectedIds.has(record._id));
-  const projectNames = new Map(selected.map((record) => [normalizedKey(record.業務内容), text(record.業務内容)]));
+  const projectNames = new Map(selected.map((record) => [normalizedKey(record.件名), text(record.件名)]));
   if (projectNames.size !== 1) return;
   const projectName = [...projectNames.values()][0];
   if (selected.length !== allProjectRecords(companyName, projectName).length) return;
@@ -55,7 +55,7 @@ function addEngineer(companyName, projectName) {
   }
   const first = projectRecords[0] || {};
   const record = {
-    _id: makeId(), 宛先会社名: companyName, 出力フォルダ名: "", 業務内容: projectName,
+    _id: makeId(), 宛先会社名: companyName, 出力フォルダ名: "", 件名: projectName, 業務内容: first.業務内容 || "",
     工程範囲: first.工程範囲 || "", 弊社責任者: first.弊社責任者 || "", 備考: first.備考 || "",
     技術者名: "", 単価: first.単価 || "", 固定契約: first.固定契約 || "N", 下限時間: first.下限時間 || "", 上限時間: first.上限時間 || ""
   };
@@ -106,7 +106,7 @@ function deleteProjectSelection(companyName, projectName) {
 function deleteCompany(companyName) {
   const records = allCompanyRecords(companyName);
   if (!records.length) return;
-  const projectCount = new Set(records.map((record) => normalizedKey(record.業務内容))).size;
+  const projectCount = new Set(records.map((record) => normalizedKey(record.件名))).size;
   if (!window.confirm(`「${companyName}」を一覧から削除します。\n削除対象：${projectCount}案件・${records.length}名\n\n削除しますか？`)) return;
   const ids = new Set(records.map((record) => record._id));
   state.records = state.records.filter((record) => !ids.has(record._id));

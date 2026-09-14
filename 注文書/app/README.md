@@ -71,6 +71,8 @@ PCを変更して保存済みパスが存在しない場合、画面には以前
 - `data/order/注文データ.csv`: 注文書の正式な主データ。
 - 「変更を保存」を押すと、画面上の全レコードがこのCSVへ保存される。
 - 「再読込」を押すと、このCSVから最新データを読み直す。
+- 案件の識別とシート名には「件名」を使用し、帳票の業務内容欄には別項目の「業務内容」を使用する。
+- 旧形式CSVに「件名」列がない場合は、読込時だけ「業務内容」を件名へ引き継ぎ、次回保存時に新形式へ更新する。
 
 注文書生成時はCSVを再読込せず、画面で選択されたレコードだけをJSONとして生成処理へ渡す。
 
@@ -138,6 +140,7 @@ PCを変更して保存済みパスが存在しない場合、画面には以前
 製品の基本機能を確認する自動テストとテスト専用データを保管する。
 
 - `Run-SmokeTests.ps1`: PowerShell/JavaScript構文、設定保存、CSV保存、バックアップ、出力トランザクション、出力先制限、選択データ生成を検証する。
+- `Run-WorkbookIntegrationTests.ps1`: 単一選択、複数選択、全選択、混合契約、複数ページ、項目転記、10pt本文、改ページ、Excel/PDF配置を実際の帳票生成で検証する。
 - `tests/fixtures/order/minimal.csv`: テスト専用の最小注文データ。
 
 テストはシステムのTEMPフォルダだけを使用し、正式なCSV、設定、テンプレート、出力先を変更しない。
@@ -146,6 +149,7 @@ PCを変更して保存済みパスが存在しない場合、画面には以前
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Run-SmokeTests.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Run-WorkbookIntegrationTests.ps1
 ```
 
 ### web
@@ -210,12 +214,23 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Run-SmokeTests.p
 3. 選択人数、対象年月、出力先を確認する。
 4. 画面上の全データを主CSVへ保存する。
 5. 選択レコードだけを生成処理へ渡す。
-6. 案件ごとのシートで、件名と業務内容の両方へ同じ「業務内容」を設定する。
+6. 「件名」で案件をまとめてシート名と帳票上部の件名へ設定し、別入力の「業務内容」を帳票の業務内容欄へ設定する。
 7. システムTEMPでExcelとPDFを生成・検証する。
 8. 指定した出力先のstaging領域へコピーして再検証する。
 9. 完成フォルダとして公開する。
 
 既存の同月フォルダは上書きせず、`2026年10月（2）` のように連番を付ける。製品フォルダとその配下は出力先に指定できない。
+
+会社ごとの成果物は次の位置へ保存する。Excelは会社フォルダ直下、PDFはPDFと同名の専用フォルダ内に置く。
+
+```text
+<出力先>/<対象年月>/<会社の保存先>/
+├─ <帳票名>.xlsx
+└─ <帳票名>/
+   └─ <帳票名>.pdf
+```
+
+複数ページになる場合、帳票上部の表頭は2ページ目以降へ繰り返さない。時間精算は4行、固定契約は2行を1技術者のブロックとして扱い、ブロックの途中では改ページしない。帳票本文の通常文字は游ゴシック10ptとし、表題・合計などの強調表示はテンプレートの書式を維持する。
 
 ## 5. 保守時のルール
 
@@ -225,7 +240,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Run-SmokeTests.p
 - 共通サーバー、設定、出力処理は `runtime/` と `modules/common/` で変更する。
 - Excel帳票のレイアウトは `templates/order/` で変更する。
 - PowerShellファイルは Windows PowerShell 5.1 で日本語を正しく読むため、UTF-8 BOM付きで保存する。
-- 変更後は `tests/Run-SmokeTests.ps1` と実際のExcel・PDF生成を確認する。
+- 変更後は `tests/Run-SmokeTests.ps1` と `tests/Run-WorkbookIntegrationTests.ps1` を実行する。
 - 生成したExcel・PDFや一時ファイルを `app` 内へ保存しない。
 
 将来、発注書機能を追加する場合は、`modules/purchase/`、`web/purchase/`、`data/purchase/`、`templates/purchase/` を追加し、注文書機能と主データ・設定・生成処理を分離する。

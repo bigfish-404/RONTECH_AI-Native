@@ -47,6 +47,9 @@ function Read-OrderData {
 
     $headers = @($rows[$headerIndex] | ForEach-Object { ([string]$_).Trim() })
     foreach ($requiredHeader in $csvHeaders) {
+        if ($requiredHeader -eq '件名') {
+            continue
+        }
         if ([Array]::IndexOf($headers, $requiredHeader) -lt 0) {
             throw "CSVに「$requiredHeader」列がありません。"
         }
@@ -69,7 +72,11 @@ function Read-OrderData {
         $record = [ordered]@{}
         foreach ($header in $csvHeaders) {
             $columnIndex = [Array]::IndexOf($headers, $header)
-            $value = if ($columnIndex -lt $sourceRow.Count) { [string]$sourceRow[$columnIndex] } else { '' }
+            $value = if ($columnIndex -ge 0 -and $columnIndex -lt $sourceRow.Count) { [string]$sourceRow[$columnIndex] } else { '' }
+            if ($header -eq '件名' -and $columnIndex -lt 0) {
+                $businessContentIndex = [Array]::IndexOf($headers, '業務内容')
+                $value = if ($businessContentIndex -ge 0 -and $businessContentIndex -lt $sourceRow.Count) { [string]$sourceRow[$businessContentIndex] } else { '' }
+            }
             $record[$header] = $value
         }
         $records.Add([pscustomobject]$record)

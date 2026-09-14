@@ -183,7 +183,7 @@
 .project-info { display: grid; gap: 0; min-width: 0; }
 .project-bar { display: grid; grid-template-columns: auto auto fit-content(600px) auto minmax(232px, 1fr); align-items: center; gap: 10px; }
 .project-actions { justify-content: flex-end; }
-.project-fields { display: grid; grid-template-columns: minmax(260px, 420px) minmax(200px, 300px) minmax(260px, 420px); align-items: start; gap: 6px 10px; margin-top: 5px; padding-top: 5px; border-top: 1px solid #c4ced8; }
+.project-fields { display: grid; grid-template-columns: minmax(280px, 1.3fr) minmax(240px, 1fr) minmax(180px, .7fr) minmax(260px, 1.2fr); align-items: start; gap: 6px 10px; margin-top: 5px; padding-top: 5px; border-top: 1px solid #c4ced8; }
 
 .inline-field { display: grid; min-width: 0; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
 .inline-label { color: #25364a; font-size: var(--font-body); font-weight: 700; line-height: 1.25; text-align: center; white-space: nowrap; }

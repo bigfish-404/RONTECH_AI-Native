@@ -1,11 +1,11 @@
 "use strict";
 
 const fields = [
-  "宛先会社名", "出力フォルダ名", "業務内容", "工程範囲", "技術者名",
+  "宛先会社名", "出力フォルダ名", "件名", "業務内容", "工程範囲", "技術者名",
   "単価", "固定契約", "下限時間", "上限時間", "弊社責任者", "備考"
 ];
 const requiredFields = [
-  "宛先会社名", "業務内容", "工程範囲", "技術者名", "単価",
+  "宛先会社名", "件名", "業務内容", "工程範囲", "技術者名", "単価",
   "固定契約", "下限時間", "上限時間", "弊社責任者"
 ];
 const appToken = document.querySelector('meta[name="app-token"]')?.content || "";
@@ -175,7 +175,7 @@ function updateActionStates() {
   elements.companyList.querySelectorAll(".company-actions").forEach((actions) => {
     const companyIds = new Set((actions.dataset.recordIds || "").split(",").filter(Boolean));
     const selected = state.records.filter((record) => companyIds.has(record._id) && state.selectedIds.has(record._id));
-    const projectNames = new Map(selected.map((record) => [normalizedKey(record.業務内容), text(record.業務内容)]));
+    const projectNames = new Map(selected.map((record) => [normalizedKey(record.件名), text(record.件名)]));
     const projectName = projectNames.size === 1 ? [...projectNames.values()][0] : "";
     const deleteProjectButton = actions.querySelector(".scope-delete-project");
     if (deleteProjectButton) {
@@ -224,9 +224,9 @@ function groupRecords(records) {
     }
     const company = companies.get(companyKey);
     company.records.push(record);
-    const projectKey = normalizedKey(record.業務内容);
+    const projectKey = normalizedKey(record.件名);
     if (!company.projects.has(projectKey)) {
-      company.projects.set(projectKey, { key: projectKey, name: text(record.業務内容), records: [] });
+      company.projects.set(projectKey, { key: projectKey, name: text(record.件名), records: [] });
     }
     company.projects.get(projectKey).records.push(record);
   }
@@ -238,7 +238,7 @@ function allCompanyRecords(companyName) {
 }
 function allProjectRecords(companyName, projectName) {
   const companyKey = normalizedKey(companyName), projectKey = normalizedKey(projectName);
-  return state.records.filter((record) => normalizedKey(record.宛先会社名) === companyKey && normalizedKey(record.業務内容) === projectKey);
+  return state.records.filter((record) => normalizedKey(record.宛先会社名) === companyKey && normalizedKey(record.件名) === projectKey);
 }
 function companyFolder(companyName) {
   return text(allCompanyRecords(companyName).find((record) => text(record.出力フォルダ名))?.出力フォルダ名) || text(companyName);

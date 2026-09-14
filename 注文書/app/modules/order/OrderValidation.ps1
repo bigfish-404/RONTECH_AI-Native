@@ -60,7 +60,7 @@ function Test-OrderData {
         $errors.Add('注文データが1件もありません。')
     }
 
-    $requiredFields = @('宛先会社名', '業務内容', '工程範囲', '技術者名', '単価', '固定契約', '下限時間', '上限時間', '弊社責任者')
+    $requiredFields = @('宛先会社名', '件名', '業務内容', '工程範囲', '技術者名', '単価', '固定契約', '下限時間', '上限時間', '弊社責任者')
     $duplicateKeys = @{}
     $companyFolders = @{}
     $projectValues = @{}
@@ -77,7 +77,7 @@ function Test-OrderData {
 
         $companyName = Get-PropertyText -Object $record -Name '宛先会社名'
         $folderName = Get-PropertyText -Object $record -Name '出力フォルダ名'
-        $projectName = Get-PropertyText -Object $record -Name '業務内容'
+        $projectName = Get-PropertyText -Object $record -Name '件名'
         $engineerName = Get-PropertyText -Object $record -Name '技術者名'
         $contractType = (Get-PropertyText -Object $record -Name '固定契約').ToUpperInvariant()
 
@@ -109,7 +109,7 @@ function Test-OrderData {
         if (-not [string]::IsNullOrWhiteSpace($companyName) -and -not [string]::IsNullOrWhiteSpace($projectName) -and -not [string]::IsNullOrWhiteSpace($engineerName)) {
             $duplicateKey = ($companyName + $separator + $projectName + $separator + $engineerName).ToLowerInvariant()
             if ($duplicateKeys.ContainsKey($duplicateKey)) {
-                $errors.Add("${displayRow}行目は$($duplicateKeys[$duplicateKey])行目と同じ会社・業務内容・技術者名です。")
+                $errors.Add("${displayRow}行目は$($duplicateKeys[$duplicateKey])行目と同じ会社・件名・技術者名です。")
             }
             else {
                 $duplicateKeys[$duplicateKey] = $displayRow
@@ -130,12 +130,13 @@ function Test-OrderData {
                 $projectValues[$projectKey] = @{
                     Company = $companyName
                     Project = $projectName
+                    業務内容 = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
                     工程範囲 = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
                     弊社責任者 = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
                     備考 = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
                 }
             }
-            foreach ($commonField in @('工程範囲', '弊社責任者', '備考')) {
+            foreach ($commonField in @('業務内容', '工程範囲', '弊社責任者', '備考')) {
                 $commonValue = Get-PropertyText -Object $record -Name $commonField
                 if (-not [string]::IsNullOrWhiteSpace($commonValue)) {
                     [void]$projectValues[$projectKey][$commonField].Add($commonValue)
@@ -177,13 +178,12 @@ function Test-OrderData {
     }
 
     foreach ($projectKey in $projectValues.Keys) {
-        foreach ($commonField in @('工程範囲', '弊社責任者', '備考')) {
+        foreach ($commonField in @('業務内容', '工程範囲', '弊社責任者', '備考')) {
             if ($projectValues[$projectKey][$commonField].Count -gt 1) {
-                $errors.Add("同一会社・同一業務内容の「$commonField」を統一してください: $($projectValues[$projectKey].Company) / $($projectValues[$projectKey].Project)")
+                $errors.Add("同一会社・同一件名の「$commonField」を統一してください: $($projectValues[$projectKey].Company) / $($projectValues[$projectKey].Project)")
             }
         }
     }
 
     return @($errors)
 }
-

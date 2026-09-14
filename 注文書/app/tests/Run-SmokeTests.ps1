@@ -27,6 +27,8 @@ if ($null -ne $node) {
         & $node.Source --check $_.FullName
         Assert-True ($LASTEXITCODE -eq 0) "JavaScript syntax error: $($_.FullName)"
     }
+    & $node.Source (Join-Path $PSScriptRoot 'Test-OrderActions.js') (Join-Path $appPath 'web\order\order-actions.js')
+    Assert-True ($LASTEXITCODE -eq 0) 'Order add/duplicate/delete behavior test failed.'
 }
 else {
     Write-Host '  Node.js is unavailable; skipped (not required at runtime).'
@@ -50,19 +52,21 @@ try {
     . (Join-Path $appPath 'modules\common\Http.ps1')
     . (Join-Path $appPath 'modules\order\OrderValidation.ps1')
     . (Join-Path $appPath 'modules\order\OrderRepository.ps1')
-    $csvHeaders = @('宛先会社名','出力フォルダ名','業務内容','工程範囲','技術者名','単価','固定契約','下限時間','上限時間','弊社責任者','備考')
+    $csvHeaders = @('宛先会社名','出力フォルダ名','件名','業務内容','工程範囲','技術者名','単価','固定契約','下限時間','上限時間','弊社責任者','備考')
     $csvPath = Join-Path $testRoot 'data\order\注文データ.csv'
     $backupRoot = Join-Path $testRoot 'backup\order'
     [void][IO.Directory]::CreateDirectory((Split-Path $csvPath -Parent))
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'fixtures\order\minimal.csv') -Destination $csvPath
     $data = Read-OrderData
     Assert-True (@($data.records).Count -eq 1) 'Fixture record could not be read.'
+    Assert-True ($data.records[0].件名 -eq $data.records[0].業務内容) 'Legacy CSV business content was not migrated to the subject.'
     $backup = Save-OrderData -Data $data
     Assert-True (Test-Path -LiteralPath $backup -PathType Leaf) 'Atomic CSV backup was not created.'
     foreach ($savedCsv in @($csvPath, $backup)) {
         $prefix = [IO.File]::ReadAllBytes($savedCsv)
         Assert-True ($prefix.Length -ge 3 -and $prefix[0] -eq 0xEF -and $prefix[1] -eq 0xBB -and $prefix[2] -eq 0xBF) "CSV is not Excel-compatible UTF-8 BOM: $savedCsv"
     }
+    Assert-True ((Get-Content -LiteralPath $csvPath -Encoding UTF8 | Select-Object -Index 2) -match '件名') 'The new CSV subject header was not saved.'
     $emptyData = [pscustomobject]@{ targetMonth = '2026-10'; records = @() }
     [void](Save-OrderData -Data $emptyData)
     $emptyReload = Read-OrderData
