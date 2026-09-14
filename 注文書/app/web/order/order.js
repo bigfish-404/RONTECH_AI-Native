@@ -16,10 +16,12 @@ elements.reloadButton.addEventListener("click", () => loadData(true));
 elements.saveButton.addEventListener("click", () => saveData(false));
 elements.generateButton.addEventListener("click", generateOrders);
 elements.shutdownButton.addEventListener("click", async () => {
-  const question = state.dirty ? "更新していない変更があります。このまま終了してもよろしいですか？" : "注文書作成ツールを終了します。よろしいですか？";
+  const question = state.dirty
+    ? "保存していない変更があります。\nこのまま終了すると、変更は失われます。\n\n終了しますか？"
+    : "注文書作成ツールを終了します。\n\n終了しますか？";
   if (!window.confirm(question)) return;
   setBusy(true, "終了中");
-  try { await api("/api/shutdown", { method: "POST" }); showResult("注文書作成ツールを終了しました。この画面を閉じてください。"); }
+  try { await api("/api/shutdown", { method: "POST" }); setDirty(false); showResult("注文書作成ツールを終了しました。この画面を閉じてください。"); }
   catch (error) { showResult("終了処理でエラーが発生しました。", error.message, true); }
 });
 window.addEventListener("beforeunload", (event) => { if (state.dirty) { event.preventDefault(); event.returnValue = ""; } });

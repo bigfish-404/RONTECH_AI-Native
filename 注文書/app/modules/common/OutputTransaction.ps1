@@ -34,7 +34,7 @@ function Assert-OutputRoot {
     $deliveryPrefix = $deliveryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
     $outputPrefix = $fullPath.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
     if ($fullPath.Equals($deliveryRoot, [StringComparison]::OrdinalIgnoreCase) -or $outputPrefix.StartsWith($deliveryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-        throw '出力先には製品フォルダの外側を選択してください。'
+        throw '出力先には製品フォルダ以外の場所を選択してください。'
     }
     $probe = Join-Path $fullPath ('.rontech-write-test-' + [guid]::NewGuid().ToString('N') + '.tmp')
     try {

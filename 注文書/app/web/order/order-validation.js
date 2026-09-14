@@ -92,6 +92,6 @@ function showValidation(result) {
   const firstError = elements.companyList.querySelector(".has-error");
   firstError?.scrollIntoView({ behavior: "smooth", block: "center" });
   firstError?.querySelector("input,select,textarea")?.focus({ preventScroll: true });
-  showToast("赤く表示された技術者と所属情報を確認してください。", true);
+  showToast("赤く表示された項目を確認してください。", true);
   return false;
 }
