@@ -94,7 +94,7 @@ function Convert-ToCsvField {
 function Save-OrderData {
     param([Parameter(Mandatory = $true)][object]$Data)
 
-    $errors = @(Test-OrderData -Data $Data -RequireRecords)
+    $errors = @(Test-OrderData -Data $Data)
     if ($errors.Count -gt 0) {
         throw ($errors -join "`n")
     }
@@ -120,11 +120,17 @@ function Save-OrderData {
     }
 
     $csvContent = ([string]::Join("`r`n", $lines)) + "`r`n"
+    $excelCompatibleUtf8 = [Text.UTF8Encoding]::new($true)
     $temporaryPath = Join-Path (Split-Path $csvPath -Parent) ('.注文データ_' + [guid]::NewGuid().ToString('N') + '.tmp')
+    $backupTemporaryPath = Join-Path $backupRoot ('.注文データ_backup_' + [guid]::NewGuid().ToString('N') + '.tmp')
+    $replaceBackupPath = Join-Path (Split-Path $csvPath -Parent) ('.注文データ_replace_' + [guid]::NewGuid().ToString('N') + '.tmp')
     try {
-        [IO.File]::WriteAllText($temporaryPath, $csvContent, [Text.UTF8Encoding]::new($false))
+        [IO.File]::WriteAllText($temporaryPath, $csvContent, $excelCompatibleUtf8)
         if (Test-Path -LiteralPath $csvPath -PathType Leaf) {
-            [IO.File]::Replace($temporaryPath, $csvPath, $backupPath, $true)
+            $previousContent = [IO.File]::ReadAllText($csvPath, [Text.Encoding]::UTF8)
+            [IO.File]::WriteAllText($backupTemporaryPath, $previousContent, $excelCompatibleUtf8)
+            [IO.File]::Move($backupTemporaryPath, $backupPath)
+            [IO.File]::Replace($temporaryPath, $csvPath, $replaceBackupPath, $true)
         }
         else {
             [IO.File]::Move($temporaryPath, $csvPath)
@@ -134,6 +140,12 @@ function Save-OrderData {
     finally {
         if (Test-Path -LiteralPath $temporaryPath -PathType Leaf) {
             Remove-Item -LiteralPath $temporaryPath -Force
+        }
+        if (Test-Path -LiteralPath $backupTemporaryPath -PathType Leaf) {
+            Remove-Item -LiteralPath $backupTemporaryPath -Force
+        }
+        if (Test-Path -LiteralPath $replaceBackupPath -PathType Leaf) {
+            Remove-Item -LiteralPath $replaceBackupPath -Force
         }
     }
 

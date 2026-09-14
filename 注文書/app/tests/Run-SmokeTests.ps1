@@ -59,6 +59,14 @@ try {
     Assert-True (@($data.records).Count -eq 1) 'Fixture record could not be read.'
     $backup = Save-OrderData -Data $data
     Assert-True (Test-Path -LiteralPath $backup -PathType Leaf) 'Atomic CSV backup was not created.'
+    foreach ($savedCsv in @($csvPath, $backup)) {
+        $prefix = [IO.File]::ReadAllBytes($savedCsv)
+        Assert-True ($prefix.Length -ge 3 -and $prefix[0] -eq 0xEF -and $prefix[1] -eq 0xBB -and $prefix[2] -eq 0xBF) "CSV is not Excel-compatible UTF-8 BOM: $savedCsv"
+    }
+    $emptyData = [pscustomobject]@{ targetMonth = '2026-10'; records = @() }
+    [void](Save-OrderData -Data $emptyData)
+    $emptyReload = Read-OrderData
+    Assert-True (@($emptyReload.records).Count -eq 0) 'An empty master CSV could not be saved and reloaded.'
 
     Write-Host '[5/6] Output transaction success and rollback'
     . (Join-Path $appPath 'modules\common\OutputTransaction.ps1')

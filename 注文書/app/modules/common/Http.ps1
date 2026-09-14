@@ -23,23 +23,40 @@ function Start-OutputFolderSelection {
     $escapedResultPath = $resultPath.Replace("'", "''")
     $pickerScript = @'
 Add-Type -AssemblyName System.Windows.Forms
+$owner = [System.Windows.Forms.Form]::new()
 $dialog = [System.Windows.Forms.FolderBrowserDialog]::new()
 try {
+    $owner.Text = '注文書作成ツール'
+    $owner.ShowInTaskbar = $false
+    $owner.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedToolWindow
+    $owner.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+    $owner.Size = [Drawing.Size]::new(1, 1)
+    $owner.Opacity = 0
+    $owner.TopMost = $true
+    $owner.Show()
+    $owner.Activate()
     $dialog.Description = '注文書の出力先を選択してください。'
     $dialog.SelectedPath = '__INITIAL_PATH__'
     $dialog.ShowNewFolderButton = $true
-    $dialogResult = $dialog.ShowDialog()
+    $dialogResult = $dialog.ShowDialog($owner)
     $result = if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK) {
-        @{ cancelled = $false; path = [IO.Path]::GetFullPath($dialog.SelectedPath) }
+        @{ cancelled = $false; path = [IO.Path]::GetFullPath($dialog.SelectedPath); error = '' }
     } else {
-        @{ cancelled = $true; path = '' }
+        @{ cancelled = $true; path = ''; error = '' }
     }
-    $json = $result | ConvertTo-Json -Compress
-    [IO.File]::WriteAllText('__RESULT_PATH__', $json, [Text.UTF8Encoding]::new($false))
+}
+catch {
+    $result = @{ cancelled = $true; path = ''; error = $_.Exception.Message }
 }
 finally {
     $dialog.Dispose()
+    $owner.Close()
+    $owner.Dispose()
 }
+$json = $result | ConvertTo-Json -Compress
+$resultTemporaryPath = '__RESULT_PATH__.tmp'
+[IO.File]::WriteAllText($resultTemporaryPath, $json, [Text.UTF8Encoding]::new($false))
+[IO.File]::Move($resultTemporaryPath, '__RESULT_PATH__')
 '@
     $pickerScript = $pickerScript.Replace('__INITIAL_PATH__', $escapedInitialPath).Replace('__RESULT_PATH__', $escapedResultPath)
     $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($pickerScript))
@@ -47,9 +64,10 @@ finally {
     $startInfo.FileName = 'powershell.exe'
     $startInfo.Arguments = "-NoProfile -STA -WindowStyle Hidden -EncodedCommand $encodedCommand"
     $startInfo.UseShellExecute = $false
-    [void][Diagnostics.Process]::Start($startInfo)
+    $pickerProcess = [Diagnostics.Process]::Start($startInfo)
     $script:outputFolderSelections[$selectionId] = @{
         ResultPath = $resultPath
+        Process = $pickerProcess
         StartedAt = [datetime]::UtcNow
     }
 
@@ -64,8 +82,25 @@ function Get-OutputFolderSelection {
     }
     $selection = $script:outputFolderSelections[$SelectionId]
     $resultPath = [string]$selection.ResultPath
+    $pickerProcess = [Diagnostics.Process]$selection.Process
     if (-not (Test-Path -LiteralPath $resultPath -PathType Leaf)) {
+        if ($pickerProcess.HasExited) {
+            Remove-Item -LiteralPath "$resultPath.tmp" -Force -ErrorAction SilentlyContinue
+            $pickerProcess.Dispose()
+            $script:outputFolderSelections.Remove($SelectionId)
+            throw '出力先選択画面を開始できませんでした。もう一度お試しください。'
+        }
         if (([datetime]::UtcNow - [datetime]$selection.StartedAt).TotalMinutes -gt 10) {
+            try {
+                if (-not $pickerProcess.HasExited) {
+                    $pickerProcess.Kill()
+                }
+            }
+            catch {
+                # The picker may exit naturally between the status check and cleanup.
+            }
+            Remove-Item -LiteralPath "$resultPath.tmp" -Force -ErrorAction SilentlyContinue
+            $pickerProcess.Dispose()
             $script:outputFolderSelections.Remove($SelectionId)
             throw '出力先の選択がタイムアウトしました。'
         }
@@ -74,7 +109,12 @@ function Get-OutputFolderSelection {
 
     $result = [IO.File]::ReadAllText($resultPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
     Remove-Item -LiteralPath $resultPath -Force
+    $pickerProcess.Dispose()
     $script:outputFolderSelections.Remove($SelectionId)
+    $errorProperty = $result.PSObject.Properties['error']
+    if ($null -ne $errorProperty -and -not [string]::IsNullOrWhiteSpace([string]$errorProperty.Value)) {
+        throw "出力先選択画面でエラーが発生しました: $([string]$errorProperty.Value)"
+    }
     return [pscustomobject]@{
         pending = $false
         cancelled = [bool]$result.cancelled

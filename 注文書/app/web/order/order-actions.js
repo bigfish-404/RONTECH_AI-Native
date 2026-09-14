@@ -86,10 +86,6 @@ function deleteProjectSelection(companyName, projectName) {
   const selected = allProjectRecords(companyName, projectName).filter((record) => state.selectedIds.has(record._id));
   const count = selected.length;
   if (!count) return;
-  if (count >= state.records.length) {
-    showToast("すべての技術者は削除できません。1名以上残してください。", true);
-    return;
-  }
   if (!window.confirm(`「${companyName} / ${projectName}」で選択した${count}名を一覧から削除します。\n技術者がいなくなった案件・会社は一覧からなくなります。\n次回の「変更を保存」で注文データから削除されます。\n生成済みのExcel・PDFは削除されません。\n\n削除してもよろしいですか？`)) return;
   const folders = new Map(groupRecords(state.records).map((company) => [
     company.key,
@@ -110,10 +106,6 @@ function deleteProjectSelection(companyName, projectName) {
 function deleteCompany(companyName) {
   const records = allCompanyRecords(companyName);
   if (!records.length) return;
-  if (records.length >= state.records.length) {
-    showToast("すべての会社は削除できません。1社以上残してください。", true);
-    return;
-  }
   const projectCount = new Set(records.map((record) => normalizedKey(record.業務内容))).size;
   if (!window.confirm(`「${companyName}」を一覧から削除します。\n所属する${projectCount}案件・${records.length}名も、次回の「更新」で注文データから削除されます。\n生成済みのExcel・PDFは削除されません。\n\n削除してもよろしいですか？`)) return;
   const ids = new Set(records.map((record) => record._id));
@@ -127,10 +119,6 @@ function deleteCompany(companyName) {
 function deleteProject(companyName, projectName) {
   const records = allProjectRecords(companyName, projectName);
   if (!records.length) return;
-  if (records.length >= state.records.length) {
-    showToast("すべての案件は削除できません。1件以上残してください。", true);
-    return;
-  }
   const removesCompany = records.length === allCompanyRecords(companyName).length;
   const companyNote = removesCompany ? "\nこの会社の最後の案件のため、会社も一覧からなくなります。" : "";
   if (!window.confirm(`「${companyName} / ${projectName}」を一覧から削除します。\n所属する${records.length}名も、次回の「更新」で注文データから削除されます。${companyNote}\n生成済みのExcel・PDFは削除されません。\n\n削除してもよろしいですか？`)) return;
@@ -188,7 +176,7 @@ async function loadData(confirmDiscard = false) {
 }
 async function saveData(silent = false) {
   state.targetMonth = elements.targetMonth.value;
-  if (!showValidation(validate())) return false;
+  if (!showValidation(validate(false))) return false;
   setBusy(true, "更新中");
   try {
     await api("/api/save", { method: "POST", body: payload() });
@@ -249,22 +237,29 @@ async function persistOutputPath() {
 }
 
 async function selectOutputFolder() {
-  setBusy(true, "選択中");
-  try {
-    const started = await api("/api/select-output-folder", { method: "POST", body: { currentPath: state.outputRoot } });
-    let result = null;
-    for (let attempt = 0; attempt < 1200; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      result = await api("/api/output-folder-selection", { method: "POST", body: { selectionId: started.selectionId } });
-      if (!result.pending) break;
+  if (selectOutputFolder.pending) return selectOutputFolder.pending;
+  selectOutputFolder.pending = (async () => {
+    setBusy(true, "選択中");
+    try {
+      const started = await api("/api/select-output-folder", { method: "POST", body: { currentPath: state.outputRoot } });
+      let result = null;
+      for (let attempt = 0; attempt < 1200; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        result = await api("/api/output-folder-selection", { method: "POST", body: { selectionId: started.selectionId } });
+        if (!result.pending) break;
+      }
+      if (!result || result.pending) throw new Error("出力先の選択がタイムアウトしました。");
+      if (result.cancelled) return;
+      state.outputRoot = text(result.path);
+      elements.outputRootInput.value = state.outputRoot;
+      elements.outputRootInput.dataset.savedValue = state.outputRoot;
+      showToast("出力先を変更しました。");
+    } catch (error) {
+      showToast(error.message, true);
+    } finally {
+      setBusy(false);
+      selectOutputFolder.pending = null;
     }
-    if (!result || result.pending) throw new Error("出力先の選択がタイムアウトしました。");
-    if (result.cancelled) return;
-    state.outputRoot = text(result.path);
-    elements.outputRootInput.value = state.outputRoot;
-    elements.outputRootInput.dataset.savedValue = state.outputRoot;
-    showToast("出力先を変更しました。");
-  } catch (error) {
-    showToast(error.message, true);
-  } finally { setBusy(false); }
+  })();
+  return selectOutputFolder.pending;
 }

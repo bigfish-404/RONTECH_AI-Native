@@ -410,8 +410,9 @@ function Invoke-OrderWorkbookGeneration {
                     $baseSheetName = Get-BaseSheetName -ProjectName $projectName
                     $worksheet.Name = Get-UniqueSheetName -BaseName $baseSheetName -UsedNames $usedSheetNames
                     $worksheet.Visible = -1
-    
+
                     $worksheet.Range('A3').Value2 = $companyName
+                    $worksheet.Range('A6').Value2 = " 件名：$projectName"
                     $worksheet.Range('C17').Formula = "=DATE($($targetMonth.Year),$($targetMonth.Month),1)"
                     $worksheet.Range('C17').NumberFormatLocal = 'yyyy"年"m"月"d"日"'
                     $worksheet.Range('F17').NumberFormatLocal = 'yyyy"年"m"月"d"日"'

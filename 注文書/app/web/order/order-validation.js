@@ -1,13 +1,13 @@
 "use strict";
 
-function validate() {
+function validate(requireRecords = true) {
   const errors = [];
   const invalidIds = new Set();
   const invalidCompanyIds = new Set();
   const invalidProjectIds = new Set();
   const add = (record, message) => { errors.push(message); if (record) invalidIds.add(record._id); };
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(text(state.targetMonth))) errors.push("対象年月を選択してください。");
-  if (!state.records.length) errors.push("注文データが1件もありません。");
+  if (requireRecords && !state.records.length) errors.push("注文データが1件もありません。");
   const duplicates = new Map(), companyFolders = new Map(), projects = new Map();
 
   state.records.forEach((record, index) => {
