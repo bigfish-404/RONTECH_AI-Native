@@ -236,7 +236,7 @@ function Get-HorizontalPageBreakRows {
     return @($rows)
 }
 
-function Set-AtomicEngineerPageBreaks {
+function Set-AtomicPageBlocks {
     param(
         [Parameter(Mandatory = $true)][object]$Worksheet,
         [Parameter(Mandatory = $true)][object]$Excel,
@@ -263,7 +263,7 @@ function Set-AtomicEngineerPageBreaks {
             return
         }
         if ($manualBreakRows.ContainsKey($splitBlock.Start)) {
-            throw "技術者「$($splitBlock.Engineer)」を同じページ内に配置できません。"
+            throw "「$($splitBlock.Name)」を同じページ内に配置できません。"
         }
 
         $breakCell = $null
@@ -277,7 +277,7 @@ function Set-AtomicEngineerPageBreaks {
         }
         $Excel.CalculateFullRebuild()
     }
-    throw '技術者単位の改ページ調整が完了しませんでした。'
+    throw '改ページ調整が完了しませんでした。'
 }
 
 function New-VersionedMonthDirectory {
@@ -554,7 +554,7 @@ function Invoke-OrderWorkbookGeneration {
                             $worksheet.Range("C${fixedTimeRow}").Font.Size = 10
                             $worksheet.Rows.Item($fixedTimeRow).RowHeight = 48
                             $worksheet.Rows("${unusedStart}:$($unusedStart + 1)").Hidden = $true
-                            $engineerBlocks.Add([pscustomobject]@{ Start = $blockStart; End = $fixedTimeRow; Engineer = $record.技術者名 })
+                            $engineerBlocks.Add([pscustomobject]@{ Start = $blockStart; End = $fixedTimeRow; Name = "技術者 $($record.技術者名)" })
                         }
                         else {
                             $containsSettlement = $true
@@ -576,7 +576,7 @@ function Invoke-OrderWorkbookGeneration {
                             $worksheet.Range("A${deductRow}").Value2 = "控除単価（${lowerHoursText}h不足分）※10円未満切捨"
                             $worksheet.Range("K${deductRow}").Value2 = '時間'
                             $worksheet.Range("L${deductRow}").Formula = ('=ROUNDDOWN(-L{0}/$S${1},-1)' -f $priceRow, $overRow)
-                            $engineerBlocks.Add([pscustomobject]@{ Start = $blockStart; End = $deductRow; Engineer = $record.技術者名 })
+                            $engineerBlocks.Add([pscustomobject]@{ Start = $blockStart; End = $deductRow; Name = "技術者 $($record.技術者名)" })
                         }
                     }
     
@@ -589,6 +589,7 @@ function Invoke-OrderWorkbookGeneration {
                         $worksheet.Rows("${noteRow}:$($noteRow + 1)").Hidden = $true
                     }
     
+                    $travelExpenseRow = Find-LabelRow -Worksheet $worksheet -ColumnNumber 1 -Label '旅費交通費'
                     $responsibleRow = Find-LabelRow -Worksheet $worksheet -ColumnNumber 1 -Label '弊社責任者'
                     $remarkRow = Find-LabelRow -Worksheet $worksheet -ColumnNumber 1 -Label '備考'
                     $subtotalRow = Find-LabelRow -Worksheet $worksheet -ColumnNumber 10 -Label '小計'
@@ -631,7 +632,10 @@ function Invoke-OrderWorkbookGeneration {
                     $worksheet.PageSetup.FitToPagesTall = $false
                     $worksheet.PageSetup.TopMargin = $excel.InchesToPoints(0.3)
                     $worksheet.PageSetup.BottomMargin = $excel.InchesToPoints(0.3)
-                    Set-AtomicEngineerPageBreaks -Worksheet $worksheet -Excel $excel -Blocks @($engineerBlocks)
+                    $pageBlocks = [System.Collections.Generic.List[object]]::new()
+                    foreach ($engineerBlock in $engineerBlocks) { $pageBlocks.Add($engineerBlock) }
+                    $pageBlocks.Add([pscustomobject]@{ Start = $travelExpenseRow; End = $remarkRow + 3; Name = '帳票下部' })
+                    Set-AtomicPageBlocks -Worksheet $worksheet -Excel $excel -Blocks @($pageBlocks)
                 }
     
                 $excel.CalculateFullRebuild()

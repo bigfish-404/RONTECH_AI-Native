@@ -117,6 +117,10 @@ try {
             $split = @($breakRows | Where-Object { $_ -gt $block.Start -and $_ -le $block.End })
             Assert-True ($split.Count -eq 0) "An engineer block was split across pages: $($block.Start)-$($block.End)."
         }
+        $travelExpenseRow = Find-LabelRow -Worksheet $worksheet -ColumnNumber 1 -Label '旅費交通費'
+        $remarkRow = Find-LabelRow -Worksheet $worksheet -ColumnNumber 1 -Label '備考'
+        $footerSplit = @($breakRows | Where-Object { $_ -gt $travelExpenseRow -and $_ -le ($remarkRow + 3) })
+        Assert-True ($footerSplit.Count -eq 0) 'The travel/delivery/summary/remarks block was split across pages.'
     }
     finally {
         if ($null -ne $workbook) { $workbook.Close($false) }
