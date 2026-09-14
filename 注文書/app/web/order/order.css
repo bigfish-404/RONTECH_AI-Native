@@ -183,12 +183,13 @@
 .project-info { display: grid; gap: 0; min-width: 0; }
 .project-bar { display: grid; grid-template-columns: auto auto fit-content(600px) auto minmax(232px, 1fr); align-items: center; gap: 10px; }
 .project-actions { justify-content: flex-end; }
-.project-fields { display: grid; grid-template-columns: minmax(280px, 1.3fr) minmax(240px, 1fr) minmax(180px, .7fr) minmax(260px, 1.2fr); align-items: start; gap: 6px 10px; margin-top: 5px; padding-top: 5px; border-top: 1px solid #c4ced8; }
+.project-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; gap: 6px 10px; margin-top: 5px; padding-top: 5px; border-top: 1px solid #c4ced8; }
 
 .inline-field { display: grid; min-width: 0; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
 .inline-label { color: #25364a; font-size: var(--font-body); font-weight: 700; line-height: 1.25; text-align: center; white-space: nowrap; }
 .company-name-field, .company-folder-field { grid-template-columns: 52px minmax(0, 1fr); }
-.project-name-field, .project-fields .inline-field { grid-template-columns: 48px minmax(0, 1fr); }
+.project-name-field { grid-template-columns: 48px minmax(0, 1fr); }
+.project-fields .inline-field { grid-template-columns: 64px minmax(0, 1fr); }
 .inline-control { width: 100%; min-width: 0; min-height: 36px; padding: 6px 9px; color: var(--text); background: #ffffff; border: 1px solid #b9c3ce; border-radius: var(--radius-control); line-height: 1.35; }
 .inline-control::placeholder { color: #98a2b3; }
 .inline-control:focus { background: #ffffff; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
