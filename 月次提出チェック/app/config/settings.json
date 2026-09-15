@@ -1,0 +1,7 @@
+{
+    "schemaVersion":  1,
+    "check":  {
+                  "folderPath":  "C:\\Working\\X\\rontechAI\\勤務表",
+                  "targetMonth":  "2026-10"
+              }
+}

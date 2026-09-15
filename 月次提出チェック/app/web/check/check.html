@@ -1,0 +1,134 @@
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">月</span>
+    <div class="product-name">
+      <span class="product-title">月次提出チェック</span>
+      <span class="product-subtitle">勤務表・交通費申請書</span>
+    </div>
+  </div>
+  <nav class="top-actions" aria-label="主な操作">
+    <span id="saveState" class="save-state is-saved"><i></i>保存済み</span>
+    <button id="reloadButton" class="button button-secondary" type="button">再読込</button>
+    <button id="saveStaffButton" class="button button-secondary" type="button">リストを保存</button>
+    <button id="runCheckButton" class="button button-primary" type="button">チェック実行</button>
+    <span class="top-action-divider" aria-hidden="true"></span>
+    <button id="shutdownButton" class="button button-plain shutdown-button" type="button">終了</button>
+  </nav>
+</header>
+
+<div class="workspace-heading">
+  <div class="workspace-controls">
+    <label class="month-control">
+      <span>対象年月</span>
+      <input id="targetMonth" type="month">
+    </label>
+    <div class="workspace-folder">
+      <label for="folderPathInput">提出フォルダ</label>
+      <input id="folderPathInput" type="text" autocomplete="off" spellcheck="false" placeholder="勤務表・交通費申請書が入っているフォルダの絶対パス">
+      <button id="selectFolderButton" class="button button-secondary folder-picker" type="button" aria-label="提出フォルダを選択" title="提出フォルダを選択">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4l2 2h7A1.75 1.75 0 0 1 20.25 8.75v8.5A1.75 1.75 0 0 1 18.5 19h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"/></svg>
+      </button>
+    </div>
+    <div class="metrics" aria-label="チェック結果の人数">
+      <div class="metric"><strong id="staffCount">0</strong><span>対象者</span></div>
+      <div class="metric metric-ng"><strong id="ngCount">–</strong><span>NG</span></div>
+      <div class="metric metric-warn"><strong id="warnCount">–</strong><span>注意</span></div>
+      <div class="metric metric-ok"><strong id="okCount">–</strong><span>OK</span></div>
+    </div>
+  </div>
+</div>
+
+<main class="page-shell">
+  <aside class="staff-panel panel" aria-labelledby="staffTitle">
+    <div class="panel-heading">
+      <h2 id="staffTitle">人員リスト</h2>
+      <span id="staffBadge" class="count-chip">0名</span>
+      <button id="addStaffButton" class="button button-secondary add-button" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>追加</span>
+      </button>
+    </div>
+    <div class="staff-table-wrap">
+      <table class="staff-table">
+        <colgroup><col class="no-col"><col><col class="pass-col"><col class="remove-col"></colgroup>
+        <thead>
+          <tr>
+            <th scope="col">No</th>
+            <th scope="col">氏名</th>
+            <th scope="col">定期券</th>
+            <th scope="col"><span class="visually-hidden">削除</span></th>
+          </tr>
+        </thead>
+        <tbody id="staffBody"></tbody>
+      </table>
+      <p id="staffEmpty" class="panel-empty" hidden>「追加」から、提出が必要な人をフルネームで登録してください。</p>
+    </div>
+    <p class="panel-note">定期券にチェックした人は、交通費申請書をチェックしません。</p>
+  </aside>
+
+  <section class="result-panel panel" aria-labelledby="resultTitle">
+    <div class="panel-heading">
+      <h2 id="resultTitle">チェック結果</h2>
+      <span id="checkedInfo" class="checked-info"></span>
+      <label class="filter-toggle">
+        <input id="problemOnly" type="checkbox">
+        <span>問題のある人だけ表示</span>
+      </label>
+    </div>
+
+    <div id="resultWrap" class="result-table-wrap" hidden>
+      <table class="result-table">
+        <colgroup>
+          <col class="toggle-col"><col class="name-col">
+          <col><col><col><col><col><col class="dates-col">
+          <col class="verdict-col"><col class="message-col">
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col"><span class="visually-hidden">詳細</span></th>
+            <th scope="col" class="name-head">氏名</th>
+            <th scope="col">勤務表</th>
+            <th scope="col">交通費</th>
+            <th scope="col">勤務表の年月</th>
+            <th scope="col">申請年月</th>
+            <th scope="col">勤務場所</th>
+            <th scope="col">日付照合</th>
+            <th scope="col">判定</th>
+            <th scope="col">連絡</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+
+    <div id="resultEmpty" class="empty-state">
+      <strong>まだチェックしていません</strong>
+      <span>対象年月と提出フォルダを確認して、「チェック実行」を押してください。</span>
+    </div>
+
+    <section id="unmatchedSection" class="unmatched" aria-labelledby="unmatchedTitle" hidden>
+      <h3 id="unmatchedTitle">人員リストと対応しないファイル <span id="unmatchedCount"></span></h3>
+      <ul id="unmatchedList"></ul>
+    </section>
+  </section>
+</main>
+
+<dialog id="messageDialog" class="message-dialog" aria-labelledby="messageTitle">
+  <div class="dialog-header">
+    <h2 id="messageTitle">連絡文</h2>
+    <button id="closeMessageButton" class="dialog-close" type="button" aria-label="閉じる" title="閉じる">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div class="dialog-body">
+    <p class="dialog-hint">内容を確認し、必要なら書き換えてからコピーしてください。</p>
+    <label class="visually-hidden" for="messageText">連絡文</label>
+    <textarea id="messageText" spellcheck="false"></textarea>
+  </div>
+  <div class="dialog-actions">
+    <button id="dismissMessageButton" class="button button-secondary" type="button">閉じる</button>
+    <button id="copyMessageButton" class="button button-primary" type="button">コピー</button>
+  </div>
+</dialog>
+
+<p id="resultMessage" class="visually-hidden" role="status" aria-live="polite">人員リストを読み込んでいます。</p>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
