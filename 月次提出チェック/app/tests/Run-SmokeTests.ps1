@@ -106,8 +106,13 @@ try {
     finally {
         $excelLock.Dispose()
     }
+    # Excel keeps an empty shared string whenever a cell held an empty text; reading must not fail on it.
+    $emptyStringWorkbook = Join-Path $testRoot 'reader\empty-string.xlsx'
+    New-TestWorkbook -Path $emptyStringWorkbook -SheetName '勤務表' -Cells @{ A1 = 2026; D1 = 9; E4 = ''; K10 = '田町本社' }
+    Assert-True ((Read-XlsxSheetValues -Path $emptyStringWorkbook -SheetNames @('勤務表')).Cells['K10'] -eq '田町本社') 'A workbook containing an empty string could not be read.'
     Assert-True ((ConvertFrom-JapaneseDateText -Value 'R8.9.10' -DefaultYear 2026) -eq [datetime]'2026-09-10') '和暦 date text was not parsed.'
     Assert-True ((ConvertFrom-JapaneseDateText -Value '９／１０' -DefaultYear 2026) -eq [datetime]'2026-09-10') 'Full-width date text was not parsed.'
+    Assert-True ((ConvertFrom-JapaneseDateText -Value '20260910' -DefaultYear 2026) -eq [datetime]'2026-09-10') 'yyyymmdd date text was not parsed.'
     Assert-True ($null -eq (ConvertFrom-JapaneseDateText -Value '2026/9/31' -DefaultYear 2026)) 'An impossible date was accepted.'
     $reiwaMonth = ConvertFrom-YearMonthValue -Value '令和8年9月'
     Assert-True ($reiwaMonth.Year -eq 2026 -and $reiwaMonth.Month -eq 9) '和暦 year/month was not parsed.'
@@ -122,6 +127,8 @@ try {
             @{ Date = (& $september 10); Kind = '交通費' }
             @{ Date = (& $september 10); Kind = '' }
             @{ Date = (& $september 12); Kind = '会議費' }
+            @{ Date = '20260903'; Kind = '交通費' }
+            @{ Date = '20260830'; Kind = '他の費用' }
         ))
     # 佐藤花子: 4 = attended with 勤務場所 blank, 10 = 勤務場所 outside the dropdown list (still a commuting day).
     New-TestWorkbook -Path (Join-Path $folder 'ロンテック勤務表_（2026年9月）（佐藤 花子）.xlsx') -SheetName '勤務表' -Validations $placeValidation `
@@ -133,6 +140,7 @@ try {
             @{ Date = (& $september 5); Kind = '交通費' }
             @{ Date = (& $september 10); Kind = '交通費' }
             @{ Date = '9月頃'; Kind = '交通費' }
+            @{ Date = ''; Kind = '交通費' }
             @{ Date = (Get-TestSerial -Year 2026 -Month 8 -Day 31); Kind = '交通費' }
         ))
     New-TestWorkbook -Path (Join-Path $folder 'ロンテック勤務表_(2026年9月)(鈴木一郎).xlsm') -SheetName '勤務表' -Validations $placeValidation `
@@ -167,11 +175,12 @@ try {
     $yamada = Get-TestResult -Name '山田太郎'
     Assert-True ($yamada.overall -eq 'ok') "山田太郎 should be OK: $(Get-IssueCodes -Result $yamada)"
     Assert-True ($yamada.cells.dates.text -eq '出社 2日 / 申請 2日') "Duplicate claim rows were not merged: $($yamada.cells.dates.text)"
+    Assert-True ((Get-IssueCodes -Result $yamada) -contains 'OTHER_KIND_ROWS') 'Rows of other kinds were not reported as reference information.'
 
     $sato = Get-TestResult -Name '佐藤花子'
     $satoCodes = Get-IssueCodes -Result $sato
     Assert-True ($sato.overall -eq 'ng') '佐藤花子 should be NG.'
-    foreach ($code in @('PLACE_EMPTY', 'PLACE_INVALID', 'KOTSU_MONTH_MISMATCH', 'CLAIM_EXTRA', 'CLAIM_MISSING', 'CLAIM_DATE_INVALID', 'CLAIM_OUT_OF_MONTH', 'FILE_MONTH_MISMATCH')) {
+    foreach ($code in @('PLACE_EMPTY', 'PLACE_INVALID', 'KOTSU_MONTH_MISMATCH', 'CLAIM_EXTRA', 'CLAIM_MISSING', 'CLAIM_DATE_EMPTY', 'CLAIM_DATE_INVALID', 'CLAIM_OUT_OF_MONTH', 'FILE_MONTH_MISMATCH')) {
         Assert-True ($satoCodes -contains $code) "佐藤花子 is missing issue $code. Found: $($satoCodes -join ', ')"
     }
     Assert-True ((@(@($sato.issues | Where-Object { $_.code -eq 'PLACE_EMPTY' })[0].days) -join ',') -eq '4') 'Blank 勤務場所 days are wrong.'
@@ -179,6 +188,7 @@ try {
     Assert-True ($invalidPlace.Count -eq 1 -and $invalidPlace[0].day -eq 10 -and $invalidPlace[0].value -eq '本社') 'A 勤務場所 outside the dropdown list was not reported.'
     Assert-True ($sato.cells.place.text -eq '未記入 1日・リスト外 1日') "勤務場所 cell text is wrong: $($sato.cells.place.text)"
     Assert-True ($sato.dayCounts.office -eq 3 -and $sato.dayCounts.claim -eq 4) 'Day counts are wrong.'
+    Assert-True ($sato.cells.dates.text -eq '出社 3日 / 申請 4日・読めない日付 3行') "Unreadable rows are not named in the dates cell: $($sato.cells.dates.text)"
     $extra = @(@($sato.issues | Where-Object { $_.code -eq 'CLAIM_EXTRA' })[0].days)
     Assert-True ((@($extra | ForEach-Object { $_.day }) -join ',') -eq '5,9') 'Extra claim days are wrong.'
     Assert-True ((@($extra | ForEach-Object { $_.category }) -join ',') -eq 'off,remote') 'Extra claim categories are wrong.'

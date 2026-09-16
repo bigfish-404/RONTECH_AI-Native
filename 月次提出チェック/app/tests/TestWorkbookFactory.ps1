@@ -15,7 +15,7 @@ function ConvertTo-ColumnNumber {
 function ConvertTo-TestSheetXml {
     param(
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][hashtable]$Cells,
-        [Parameter(Mandatory = $true)][AllowEmptyCollection()][System.Collections.Generic.List[string]]$SharedStrings,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][System.Collections.Generic.List[string]]$SharedStrings,
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][hashtable]$SharedIndex
     )
 

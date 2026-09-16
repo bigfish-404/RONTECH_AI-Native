@@ -61,7 +61,7 @@ function Get-SubmissionFiles {
 function Resolve-SubmissionOwners {
     param(
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$Files,
-        [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$NameKeys
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][string[]]$NameKeys
     )
 
     # The list drives the search: a file belongs to the listed full name its file name contains.

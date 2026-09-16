@@ -201,7 +201,7 @@
 .badge-ok { color: var(--success); background: var(--success-soft); border-color: var(--success-line); }
 .badge-ng { color: var(--danger); background: var(--danger-soft); border-color: var(--danger-line); }
 .badge-warn { color: var(--warning); background: var(--warning-soft); border-color: var(--warning-line); }
-.badge-skip { color: var(--neutral); background: var(--neutral-soft); border-color: var(--line-soft); }
+.badge-skip, .badge-info { color: var(--neutral); background: var(--neutral-soft); border-color: var(--line-soft); }
 .badge-none { padding-inline: 2px; color: var(--text-faint); }
 .badge-none::before { display: none; }
 .verdict { display: inline-grid; min-width: 46px; height: 26px; place-items: center; padding: 0 8px; color: #ffffff; border-radius: var(--radius-control); font-size: 13px; font-weight: 700; }

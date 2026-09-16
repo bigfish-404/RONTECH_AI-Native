@@ -142,7 +142,9 @@ function Read-XlsxSharedStrings {
 function Get-XlsxCellValue {
     param(
         [Parameter(Mandatory = $true)][Xml.XmlElement]$Cell,
-        [Parameter(Mandatory = $true)][AllowEmptyCollection()][System.Collections.Generic.List[string]]$SharedStrings
+        # AllowEmptyString matters: Windows PowerShell refuses to bind a mandatory string collection
+        # that contains an empty entry, and Excel writes one whenever a cell held an empty string.
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][System.Collections.Generic.List[string]]$SharedStrings
     )
 
     $valueNode = $null

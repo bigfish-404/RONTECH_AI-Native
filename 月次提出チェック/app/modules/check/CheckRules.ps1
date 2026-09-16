@@ -213,7 +213,9 @@ function Get-PersonCheckResult {
             }
 
             $invalidRows = [System.Collections.Generic.List[object]]::new()
+            $emptyDateRows = [System.Collections.Generic.List[object]]::new()
             $outOfMonthRows = [System.Collections.Generic.List[object]]::new()
+            $otherKindRows = [System.Collections.Generic.List[object]]::new()
             $commuterRowCount = 0
             foreach ($row in $kotsu.Rows) {
                 $kind = ConvertTo-CompactText -Value $row.Kind
@@ -222,11 +224,17 @@ function Get-PersonCheckResult {
                     continue
                 }
                 # Only transport rows are compared; 宿泊費・会議費・他の費用 may fall on any day.
+                # They are reported as reference rows so that a skipped row never looks like a missing one.
                 if ($kind -and $kind -ne '交通費') {
+                    $otherKindRows.Add([ordered]@{ row = $row.Row; kind = $row.Kind })
+                    continue
+                }
+                if (-not $row.DateText) {
+                    $emptyDateRows.Add($row.Row)
                     continue
                 }
                 $date = ConvertFrom-ExcelSerialDate -Value $row.DateText
-                if ($null -eq $date -and $row.DateText) {
+                if ($null -eq $date) {
                     $date = ConvertFrom-JapaneseDateText -Value $row.DateText -DefaultYear $Year
                 }
                 if ($null -eq $date) {
@@ -239,6 +247,9 @@ function Get-PersonCheckResult {
                 }
                 $claimDays[$date.Day] = $true
             }
+            if ($emptyDateRows.Count -gt 0) {
+                $issues.Add(@{ code = 'CLAIM_DATE_EMPTY'; severity = 'ng'; target = 'kotsu'; rows = $emptyDateRows.ToArray() })
+            }
             if ($invalidRows.Count -gt 0) {
                 $issues.Add(@{ code = 'CLAIM_DATE_INVALID'; severity = 'ng'; target = 'kotsu'; rows = $invalidRows.ToArray() })
             }
@@ -248,6 +259,12 @@ function Get-PersonCheckResult {
             if ($commuterRowCount -gt 0) {
                 $issues.Add(@{ code = 'COMMUTER_ROW'; severity = 'warn'; target = 'kotsu'; count = $commuterRowCount })
             }
+            if ($otherKindRows.Count -gt 0) {
+                $issues.Add(@{ code = 'OTHER_KIND_ROWS'; severity = 'info'; target = 'kotsu'; rows = $otherKindRows.ToArray() })
+            }
+            # Rows the comparison could not use are named in the table cell, so 申請 0日 never looks like "nothing submitted".
+            $unreadableCount = $emptyDateRows.Count + $invalidRows.Count + $outOfMonthRows.Count
+            $unreadableSuffix = $(if ($unreadableCount -gt 0) { "・読めない日付 ${unreadableCount}行" } else { '' })
 
             $claimDayList = @($claimDays.Keys | Sort-Object)
             if ($kinmuMonthMatches) {
@@ -262,11 +279,11 @@ function Get-PersonCheckResult {
                 if ($missingDays.Count -gt 0) {
                     $issues.Add(@{ code = 'CLAIM_MISSING'; severity = 'ng'; target = 'kotsu'; days = $missingDays })
                 }
-                $hasDateProblem = $extraDays.Count -gt 0 -or $missingDays.Count -gt 0 -or $invalidRows.Count -gt 0 -or $outOfMonthRows.Count -gt 0
-                $cells.dates = New-CheckCell -Status $(if ($hasDateProblem) { 'ng' } else { 'ok' }) -Text "出社 $($officeDays.Count)日 / 申請 $($claimDayList.Count)日"
+                $hasDateProblem = $extraDays.Count -gt 0 -or $missingDays.Count -gt 0 -or $unreadableCount -gt 0
+                $cells.dates = New-CheckCell -Status $(if ($hasDateProblem) { 'ng' } else { 'ok' }) -Text "出社 $($officeDays.Count)日 / 申請 $($claimDayList.Count)日$unreadableSuffix"
             }
             else {
-                $cells.dates = New-CheckCell -Status 'none' -Text $(if ($null -ne $kinmu) { '勤務表の年月違い' } else { "申請 $($claimDayList.Count)日" })
+                $cells.dates = New-CheckCell -Status 'none' -Text $(if ($null -ne $kinmu) { '勤務表の年月違い' } else { "申請 $($claimDayList.Count)日$unreadableSuffix" })
             }
         }
     }

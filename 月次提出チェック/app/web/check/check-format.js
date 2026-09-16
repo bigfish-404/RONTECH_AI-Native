@@ -2,7 +2,8 @@
 
 // Pure formatting helpers: the check results table text and the staff-facing message template.
 
-const STATUS_LABELS = { ok: "OK", ng: "NG", warn: "注意", skip: "対象外", none: "—" };
+const STATUS_LABELS = { ok: "OK", ng: "NG", warn: "注意", info: "参考", skip: "対象外", none: "—" };
+const DATE_FORMAT_HINT = "「9/10」「2026/9/10」「20260910」";
 const VERDICT_LABELS = { ok: "OK", ng: "NG", warn: "注意" };
 const CATEGORY_LABELS = { office: "出社", remote: "在宅", off: "休み", placeEmpty: "勤務場所未記入", unknown: "勤務表なし" };
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -60,6 +61,12 @@ function formatRows(rows, key) {
 function formatPlaceValues(targetMonth, days) {
   return asArray(days).map((day) => `${formatDay(targetMonth, day.day)}「${day.value}」`).join("、");
 }
+function formatRowNumbers(rows) {
+  return asArray(rows).map((row) => `${row}行目`).join("、");
+}
+function formatKindRows(rows) {
+  return asArray(rows).map((row) => `${row.row}行目「${row.kind}」`).join("、");
+}
 
 // Text shown to the checker in the expanded detail row.
 function issueSummary(issue, targetMonth) {
@@ -82,8 +89,10 @@ function issueSummary(issue, targetMonth) {
     case "PLACE_INVALID": return `勤務場所がリストにない値の日：${formatPlaceValues(targetMonth, issue.days)}（リスト：${asArray(issue.options).join("・")}）`;
     case "CLAIM_EXTRA": return `出社日ではないのに交通費を申請している日：${formatExtraDays(targetMonth, issue.days)}`;
     case "CLAIM_MISSING": return `出社日なのに交通費を申請していない日：${formatDayList(targetMonth, issue.days)}`;
-    case "CLAIM_DATE_INVALID": return `日付を読み取れない行：${formatRows(issue.rows, "text")}`;
+    case "CLAIM_DATE_EMPTY": return `日付が空欄の行：${formatRowNumbers(issue.rows)}`;
+    case "CLAIM_DATE_INVALID": return `日付を読み取れない行：${formatRows(issue.rows, "text")}（${DATE_FORMAT_HINT}のいずれかで入力する）`;
     case "CLAIM_OUT_OF_MONTH": return `対象月以外の日付：${formatRows(issue.rows, "date")}`;
+    case "OTHER_KIND_ROWS": return `日付照合の対象外の行：${formatKindRows(issue.rows)}。交通費以外の類型は照合しない。`;
     case "COMMUTER_ROW": return `交通費申請書に定期券の行が${issue.count}行あります。人員リストで定期券にチェックするか確認してください。`;
     default: return issue.code;
   }
@@ -108,7 +117,8 @@ function adviceLine(issue, targetMonth) {
     case "PLACE_INVALID": return `次の日の勤務場所がリストにない値になっています。リスト（${asArray(issue.options).join("・")}）から選んでください：${formatPlaceValues(targetMonth, issue.days)}`;
     case "CLAIM_EXTRA": return `次の日は勤務表では出社日になっていませんが、交通費が申請されています：${formatExtraDays(targetMonth, issue.days)}`;
     case "CLAIM_MISSING": return `次の日は勤務表では出社日ですが、交通費が申請されていません：${formatDayList(targetMonth, issue.days)}`;
-    case "CLAIM_DATE_INVALID": return `日付を読み取れない行があります：${formatRows(issue.rows, "text")}。「9/10」のように入力してください。`;
+    case "CLAIM_DATE_EMPTY": return `次の行は日付が入力されていません。入力をお願いします：${formatRowNumbers(issue.rows)}`;
+    case "CLAIM_DATE_INVALID": return `日付を読み取れない行があります：${formatRows(issue.rows, "text")}。${DATE_FORMAT_HINT}のいずれかの形式で入力してください。`;
     case "CLAIM_OUT_OF_MONTH": return `${monthLabel}以外の日付が入力されています：${formatRows(issue.rows, "date")}`;
     default: return "";
   }

@@ -30,6 +30,8 @@ assert(sato.includes("勤務場所が空欄です。リストから選んでく�
 assert(sato.includes("リストにない値になっています。リスト（客先出勤・田町本社・大阪支店・在宅）から選んでください：9/10(木)「本社」"), "invalid-place advice is wrong");
 assert(sato.includes("交通費が申請されています：9/5(土)（休み）、9/9(水)（在宅）"), "extra-claim advice is wrong");
 assert(sato.includes("交通費が申請されていません：9/7(月)"), "missing-claim advice is wrong");
+assert(sato.includes("日付が入力されていません"), "empty-date advice is missing");
+assert(sato.includes("20260910"), "the accepted date formats are not shown");
 assert(sato.includes("出社日数と交通費の申請日数が一致していません（出社 3日 / 申請 4日）。"), "day count line is wrong");
 
 const sameCount = format.buildMessage({
